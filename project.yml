@@ -1,0 +1,82 @@
+name: NovelyPrivate
+options:
+  bundleIdPrefix: com.novelyprivate
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+    ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+targets:
+  NovelyPrivate:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/App
+      - path: Sources/Shared
+      - path: Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.novelyprivate.app
+        PRODUCT_NAME: Novely
+        INFOPLIST_FILE: Config/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Config/NovelyPrivate.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MACCATALYST: "NO"
+        GENERATE_INFOPLIST_FILE: "NO"
+    dependencies:
+      - target: NovelyWidgets
+        embed: true
+
+  NovelyWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources/Widgets
+      - path: Sources/Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.novelyprivate.app.widgets
+        PRODUCT_NAME: NovelyWidgets
+        INFOPLIST_FILE: Config/WidgetsInfo.plist
+        CODE_SIGN_ENTITLEMENTS: Config/NovelyWidgets.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: "YES"
+        GENERATE_INFOPLIST_FILE: "NO"
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+
+  NovelyPrivateUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.novelyprivate.app.uitests
+        GENERATE_INFOPLIST_FILE: "YES"
+        TEST_TARGET_NAME: NovelyPrivate
+    dependencies:
+      - target: NovelyPrivate
+
+schemes:
+  NovelyPrivate:
+    build:
+      targets:
+        NovelyPrivate: all
+        NovelyWidgets: all
+        NovelyPrivateUITests: [test]
+    test:
+      targets:
+        - NovelyPrivateUITests

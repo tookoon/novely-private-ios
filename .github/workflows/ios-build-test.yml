@@ -1,0 +1,118 @@
+name: Build IPA & iOS 26 Simulator Visual Tests
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Latest Xcode & Inspect Simulators
+        run: |
+          echo "=== Available Xcodes ==="
+          ls -d /Applications/Xcode*.app || true
+          LATEST_XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -n 1)
+          echo "Selecting: $LATEST_XCODE"
+          sudo xcode-select -s "$LATEST_XCODE"
+          xcodebuild -version
+          xcrun simctl list runtimes
+          xcrun simctl list devices available | head -n 40
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen &> /dev/null; then
+            brew install xcodegen
+          fi
+
+      - name: Generate Xcode Project
+        run: |
+          xcodegen generate
+
+      - name: Build Unsigned Device IPA (for Sideloading)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project NovelyPrivate.xcodeproj \
+            -scheme NovelyPrivate \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/device \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            build | tail -n 120
+
+          mkdir -p build/ipa/Payload
+          cp -R build/device/Build/Products/Release-iphoneos/Novely.app build/ipa/Payload/
+          cd build/ipa
+          zip -r -q ../NovelyPrivate.ipa Payload
+          ls -lh ../NovelyPrivate.ipa
+
+      - name: Run iOS 26 Simulator UI Tests & Capture Screenshots
+        run: |
+          set -o pipefail
+          SIM_ID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)['devices']
+          candidates = []
+          for rt, devs in data.items():
+              if 'iOS' not in rt: continue
+              for d in devs:
+                  if d.get('isAvailable') and 'iPhone' in d.get('name', ''):
+                      score = 0
+                      if '26' in rt: score += 100
+                      if 'Pro' in d['name'] and 'Max' not in d['name']: score += 20
+                      elif '17' in d['name'] or '16' in d['name']: score += 10
+                      candidates.append((score, rt, d['name'], d['udid']))
+          candidates.sort(reverse=True)
+          if not candidates:
+              sys.exit(1)
+          print(candidates[0][3])
+          ")
+          echo "Selected Simulator UDID: $SIM_ID"
+          xcrun simctl boot "$SIM_ID" || true
+          xcrun simctl status_bar "$SIM_ID" override --time "09:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
+
+          mkdir -p build/screenshots
+          xcodebuild test \
+            -project NovelyPrivate.xcodeproj \
+            -scheme NovelyPrivate \
+            -destination "platform=iOS Simulator,id=$SIM_ID" \
+            -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            | tail -n 150
+
+      - name: Extract Screenshots from xcresult
+        if: always()
+        run: |
+          mkdir -p build/screenshots
+          if [ -d build/TestResults.xcresult ]; then
+            xcrun xcresulttool export attachments --path build/TestResults.xcresult --output-path build/screenshots || true
+            ls -la build/screenshots
+          fi
+
+      - name: Upload Unsigned IPA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NovelyPrivate-IPA
+          path: build/NovelyPrivate.ipa
+          if-no-files-found: warn
+
+      - name: Upload Simulator Screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-screenshots
+          path: build/screenshots
+          if-no-files-found: warn

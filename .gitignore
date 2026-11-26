@@ -1,0 +1,8 @@
+.DS_Store
+build/
+DerivedData/
+*.xcodeproj
+xcuserdata/
+AssetsRaw/
+screenshots/
+*.ipa
