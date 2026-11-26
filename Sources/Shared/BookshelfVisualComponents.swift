@@ -603,27 +603,51 @@ public struct ShelfDecorView: View {
     public var body: some View {
         switch kind {
         case .sleepingCat:
-            Image("DecorSleepingCat")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 82 * scale, height: 54 * scale)
-                .shadow(color: .black.opacity(0.55), radius: 4 * scale, x: 0, y: 3 * scale)
-                .offset(y: 3 * scale)
+            ZStack(alignment: .bottom) {
+                // Grounded dark contact shadow directly on the wooden shelf surface
+                Ellipse()
+                    .fill(Color.black.opacity(0.68))
+                    .frame(width: 82 * scale, height: 11 * scale)
+                    .blur(radius: 4 * scale)
+                    .offset(y: 3 * scale)
+
+                Image("DecorSleepingCat")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 98 * scale, height: 64 * scale)
+                    .shadow(color: .black.opacity(0.42), radius: 2.5 * scale, x: 0, y: 2 * scale)
+            }
+            .offset(y: 8 * scale)
         case .monstera:
             let growthFactor = 0.68 + Double(min(5, max(1, plantStage))) * 0.075
-            Image("DecorPottedPlant")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 66 * scale * growthFactor, height: 76 * scale * growthFactor)
-                .shadow(color: .black.opacity(0.50), radius: 4 * scale, x: 0, y: 3 * scale)
-                .offset(y: 2 * scale)
+            ZStack(alignment: .bottom) {
+                Ellipse()
+                    .fill(Color.black.opacity(0.62))
+                    .frame(width: 44 * scale * growthFactor, height: 9 * scale)
+                    .blur(radius: 3.5 * scale)
+                    .offset(y: 3 * scale)
+
+                Image("DecorPottedPlant")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 68 * scale * growthFactor, height: 78 * scale * growthFactor)
+                    .shadow(color: .black.opacity(0.38), radius: 2.5 * scale, x: 0, y: 2 * scale)
+            }
+            .offset(y: 7 * scale)
         case .snowman:
-            Image("DecorSnowman")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 52 * scale, height: 64 * scale)
-                .shadow(color: .black.opacity(0.48), radius: 3.5 * scale, x: 0, y: 3 * scale)
-                .offset(y: 2 * scale)
+            ZStack(alignment: .bottom) {
+                Ellipse()
+                    .fill(Color.black.opacity(0.55))
+                    .frame(width: 38 * scale, height: 8 * scale)
+                    .blur(radius: 3 * scale)
+                    .offset(y: 2 * scale)
+
+                Image("DecorSnowman")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 54 * scale, height: 66 * scale)
+            }
+            .offset(y: 6 * scale)
         case .candle:
             candleView
         case .snowGlobe:
@@ -826,6 +850,7 @@ public struct BookshelfTierView: View {
             }
             .padding(.horizontal, 16 * scale)
             .frame(minHeight: 118 * scale, alignment: .bottom)
+            .zIndex(2)
 
             WoodenShelfPlank(
                 woodFinish: woodFinish,
@@ -833,6 +858,7 @@ public struct BookshelfTierView: View {
                 compact: scale < 0.75
             )
             .padding(.horizontal, 6 * scale)
+            .zIndex(1)
         }
     }
 
