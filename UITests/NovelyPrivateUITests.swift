@@ -12,8 +12,8 @@ final class NovelyPrivateUITests: XCTestCase {
         app.launchArguments = ["--ui-testing"]
         app.launch()
 
-        // Wait a moment so background real covers can hydrate from Open Library / Google Books
-        sleep(5)
+        // Wait for concurrent Apple Books + Google Books real cover hydration on launch
+        sleep(8)
         attachScreenshot(name: "01_Bookshelf_WarmWood_Cat_Plant")
 
         // 2. Edit Mode on Shelf (showing move arrows on books & cat!)

@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-// MARK: - Online Book Search Result (Google Books + Open Library)
+// MARK: - Online Book Search Result (Apple Books + Google Books + Open Library)
 
 public struct OnlineBookResult: Identifiable, Hashable {
     public let id = UUID()
@@ -18,8 +18,7 @@ public struct OnlineBookResult: Identifiable, Hashable {
 
 public enum BookMetadataService {
 
-    /// Searches Google Books first (rich German metadata, real covers & Klappentext),
-    /// then merges/falls back to Open Library if needed.
+    /// Searches Apple Books (DE) and Google Books, merging/enriching high-res covers and German synopses.
     public static func searchBooks(query: String) async -> [OnlineBookResult] {
         let cleaned = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return [] }
@@ -27,12 +26,133 @@ public enum BookMetadataService {
         let digitsOnly = cleaned.filter(\.isNumber)
         let isISBN = digitsOnly.count == 10 || digitsOnly.count == 13
 
-        let googleResults = await searchGoogleBooks(query: isISBN ? "isbn:\(digitsOnly)" : cleaned)
+        if isISBN {
+            // ISBN lookup: Google Books is strongest for ISBN -> metadata, then enrich missing cover via Apple Books
+            var googleResults = await searchGoogleBooks(query: "isbn:\(digitsOnly)")
+            if googleResults.isEmpty {
+                googleResults = await searchOpenLibrary(query: cleaned, isbnOverride: digitsOnly)
+            }
+            if let first = googleResults.first, first.coverURLString == nil {
+                let apple = await searchAppleBooks(query: "\(first.title) \(first.author)", country: "de")
+                if let betterCover = apple.first?.coverURLString {
+                    googleResults[0] = OnlineBookResult(
+                        title: first.title,
+                        author: first.author,
+                        isbn: first.isbn,
+                        pageCount: first.pageCount,
+                        publisher: first.publisher,
+                        publishedYear: first.publishedYear,
+                        bindingType: first.bindingType,
+                        bookDescription: first.bookDescription.isEmpty ? (apple.first?.bookDescription ?? "") : first.bookDescription,
+                        coverURLString: betterCover
+                    )
+                }
+            }
+            return googleResults
+        }
+
+        // Title / author search: query Apple Books DE + Google Books concurrently
+        async let appleTask = searchAppleBooks(query: cleaned, country: "de")
+        async let googleTask = searchGoogleBooks(query: cleaned)
+
+        let appleResults = await appleTask
+        let googleResults = await googleTask
+
+        if !appleResults.isEmpty {
+            // Enrich Apple Books hits with ISBN/pageCount from Google Books if titles align, else append Google hits
+            var merged: [OnlineBookResult] = []
+            for appleItem in appleResults {
+                let normTitle = appleItem.title.lowercased()
+                let match = googleResults.first { $0.title.lowercased().contains(normTitle) || normTitle.contains($0.title.lowercased()) }
+                merged.append(OnlineBookResult(
+                    title: appleItem.title,
+                    author: appleItem.author,
+                    isbn: match?.isbn ?? appleItem.isbn,
+                    pageCount: match?.pageCount ?? appleItem.pageCount,
+                    publisher: match?.publisher.isEmpty == false ? match!.publisher : appleItem.publisher,
+                    publishedYear: appleItem.publishedYear.isEmpty ? (match?.publishedYear ?? "") : appleItem.publishedYear,
+                    bindingType: appleItem.bindingType,
+                    bookDescription: appleItem.bookDescription.isEmpty ? (match?.bookDescription ?? "") : appleItem.bookDescription,
+                    coverURLString: appleItem.coverURLString ?? match?.coverURLString
+                ))
+            }
+            for g in googleResults where !merged.contains(where: { $0.title.lowercased() == g.title.lowercased() }) {
+                merged.append(g)
+            }
+            return Array(merged.prefix(10))
+        }
+
         if !googleResults.isEmpty {
             return googleResults
         }
-        return await searchOpenLibrary(query: cleaned, isbnOverride: isISBN ? digitsOnly : nil)
+        return await searchOpenLibrary(query: cleaned, isbnOverride: nil)
     }
+
+    // MARK: - Apple Books / iTunes Search API (High-Res 600x600 German Covers!)
+
+    public static func searchAppleBooks(query: String, country: String = "de") async -> [OnlineBookResult] {
+        let cleaned = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty,
+              let encoded = cleaned.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://itunes.apple.com/search?media=ebook&country=\(country)&limit=8&term=\(encoded)") else {
+            return []
+        }
+
+        do {
+            var req = URLRequest(url: url)
+            req.timeoutInterval = 8
+            let (data, _) = try await URLSession.shared.data(for: req)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let results = json["results"] as? [[String: Any]] else { return [] }
+
+            return results.compactMap { item -> OnlineBookResult? in
+                guard let title = item["trackName"] as? String else { return nil }
+                let author = item["artistName"] as? String ?? "Unbekannt"
+                let rawDesc = item["description"] as? String ?? ""
+                let cleanDesc = stripBasicHTML(rawDesc)
+                let releaseDate = item["releaseDate"] as? String ?? ""
+                let year = String(releaseDate.prefix(4))
+                let artwork100 = item["artworkUrl100"] as? String
+                let highResArtwork = artwork100?
+                    .replacingOccurrences(of: "100x100bb", with: "600x600bb")
+                    .replacingOccurrences(of: "http://", with: "https://")
+
+                return OnlineBookResult(
+                    title: title,
+                    author: author,
+                    isbn: "",
+                    pageCount: 360,
+                    publisher: "",
+                    publishedYear: year,
+                    bindingType: "Gebunden",
+                    bookDescription: cleanDesc,
+                    coverURLString: highResArtwork
+                )
+            }
+        } catch {
+            return []
+        }
+    }
+
+    private static func stripBasicHTML(_ html: String) -> String {
+        guard !html.isEmpty else { return "" }
+        var text = html
+            .replacingOccurrences(of: "<br\\s*/?>", with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: "</p>", with: "\n\n", options: .caseInsensitive)
+            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        text = text
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&apos;", with: "'")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+        while text.contains("\n\n\n") {
+            text = text.replacingOccurrences(of: "\n\n\n", with: "\n\n")
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Google Books
 
     private static func searchGoogleBooks(query: String) async -> [OnlineBookResult] {
         guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
@@ -50,7 +170,9 @@ public enum BookMetadataService {
 
     private static func fetchGoogleVolumes(url: URL) async -> [OnlineBookResult] {
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            var req = URLRequest(url: url)
+            req.timeoutInterval = 8
+            let (data, _) = try await URLSession.shared.data(for: req)
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let items = json["items"] as? [[String: Any]] else { return [] }
 
@@ -83,6 +205,7 @@ public enum BookMetadataService {
                         coverURL = raw
                             .replacingOccurrences(of: "http://", with: "https://")
                             .replacingOccurrences(of: "&edge=curl", with: "")
+                            .replacingOccurrences(of: "zoom=1", with: "zoom=2")
                     }
                 } else if !isbn.isEmpty {
                     coverURL = "https://covers.openlibrary.org/b/isbn/\(isbn)-L.jpg"
@@ -105,13 +228,17 @@ public enum BookMetadataService {
         }
     }
 
+    // MARK: - Open Library
+
     private static func searchOpenLibrary(query: String, isbnOverride: String?) async -> [OnlineBookResult] {
         guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "https://openlibrary.org/search.json?q=\(encoded)&limit=8") else {
             return []
         }
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            var req = URLRequest(url: url)
+            req.timeoutInterval = 8
+            let (data, _) = try await URLSession.shared.data(for: req)
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let docs = json["docs"] as? [[String: Any]] else { return [] }
 
@@ -148,29 +275,71 @@ public enum BookMetadataService {
         }
     }
 
-    /// Downloads a real book cover image, saves it locally for offline & WidgetKit usage,
-    /// and extracts a matching dark-rich dominant hex color for the book spine!
-    public static func downloadAndStoreCover(urlString: String?, isbn: String) async -> (filename: String, dominantHex: String?)? {
-        var candidates: [URL] = []
-        if let urlString, let url = URL(string: urlString) {
-            candidates.append(url)
-        }
-        let cleanISBN = isbn.filter(\.isNumber)
-        if cleanISBN.count == 10 || cleanISBN.count == 13,
-           let olURL = URL(string: "https://covers.openlibrary.org/b/isbn/\(cleanISBN)-L.jpg?default=false") {
-            candidates.append(olURL)
+    // MARK: - Best Cover Downloader (Cover URL -> Apple Books DE -> Apple Books US -> Google Books -> Open Library)
+
+    public static func downloadBestCover(
+        title: String,
+        author: String,
+        isbn: String,
+        coverURLString: String?
+    ) async -> (filename: String, dominantHex: String?)? {
+        var candidateURLs: [String] = []
+        if let coverURLString, !coverURLString.isEmpty {
+            candidateURLs.append(coverURLString)
         }
 
-        for url in candidates {
+        // Try fast direct URL first
+        if let hit = await tryDownloadFromURLStrings(candidateURLs) {
+            return hit
+        }
+
+        // Query Apple Books DE (high-res 600x600 real covers)
+        let query = "\(title) \(author)".trimmingCharacters(in: .whitespacesAndNewlines)
+        let appleDE = await searchAppleBooks(query: query, country: "de")
+        var fallbackURLs = appleDE.compactMap(\.coverURLString)
+
+        if fallbackURLs.isEmpty {
+            let appleUS = await searchAppleBooks(query: query, country: "us")
+            fallbackURLs.append(contentsOf: appleUS.compactMap(\.coverURLString))
+        }
+
+        if let hit = await tryDownloadFromURLStrings(Array(fallbackURLs.prefix(2))) {
+            return hit
+        }
+
+        // Fallback to Google Books / Open Library ISBN cover
+        var secondaryURLs: [String] = []
+        let cleanISBN = isbn.filter(\.isNumber)
+        if cleanISBN.count == 10 || cleanISBN.count == 13 {
+            let google = await searchGoogleBooks(query: "isbn:\(cleanISBN)")
+            secondaryURLs.append(contentsOf: google.compactMap(\.coverURLString))
+            secondaryURLs.append("https://covers.openlibrary.org/b/isbn/\(cleanISBN)-L.jpg?default=false")
+        } else {
+            let google = await searchGoogleBooks(query: query)
+            secondaryURLs.append(contentsOf: google.compactMap(\.coverURLString))
+        }
+
+        return await tryDownloadFromURLStrings(secondaryURLs)
+    }
+
+    public static func downloadAndStoreCover(urlString: String?, isbn: String) async -> (filename: String, dominantHex: String?)? {
+        await downloadBestCover(title: "", author: "", isbn: isbn, coverURLString: urlString)
+    }
+
+    private static func tryDownloadFromURLStrings(_ urlStrings: [String]) async -> (filename: String, dominantHex: String?)? {
+        for urlString in urlStrings {
+            guard let url = URL(string: urlString) else { continue }
             do {
-                let (data, response) = try await URLSession.shared.data(from: url)
+                var req = URLRequest(url: url)
+                req.timeoutInterval = 8
+                let (data, response) = try await URLSession.shared.data(for: req)
                 guard let http = response as? HTTPURLResponse,
                       (200...299).contains(http.statusCode),
                       data.count > 2500,
                       let image = UIImage(data: data),
                       image.size.width >= 60 else { continue }
 
-                guard let jpegData = image.jpegData(compressionQuality: 0.85),
+                guard let jpegData = image.jpegData(compressionQuality: 0.88),
                       let filename = LibraryStorage.saveImageData(jpegData, prefix: "cover") else {
                     continue
                 }

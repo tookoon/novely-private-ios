@@ -110,9 +110,9 @@ public final class LibraryStore: ObservableObject {
 
     public static func defaultDecor() -> [ShelfDecorItem] {
         [
+            ShelfDecorItem(kind: .candle, rowIndex: 0, slotIndex: 0, isEnabled: true),
             ShelfDecorItem(kind: .sleepingCat, rowIndex: 0, slotIndex: 2, isEnabled: true),
             ShelfDecorItem(kind: .monstera, rowIndex: 1, slotIndex: 0, isEnabled: true),
-            ShelfDecorItem(kind: .candle, rowIndex: 0, slotIndex: 0, isEnabled: true),
             ShelfDecorItem(kind: .snowman, rowIndex: 2, slotIndex: 2, isEnabled: false),
             ShelfDecorItem(kind: .snowGlobe, rowIndex: 1, slotIndex: 2, isEnabled: false),
             ShelfDecorItem(kind: .coffeeMug, rowIndex: 2, slotIndex: 0, isEnabled: false)
@@ -136,18 +136,42 @@ public final class LibraryStore: ObservableObject {
         persist()
     }
 
-    // MARK: - Background Real Cover Hydration
+    // MARK: - Concurrent Background Real Cover Hydration
 
     public func hydrateRealCoversIfNeeded() async {
-        let targets = books.filter { $0.customCoverFilename == nil && !$0.isbn.isEmpty }
-        for book in targets {
-            if let result = await BookMetadataService.downloadAndStoreCover(urlString: book.coverURLString, isbn: book.isbn) {
-                if let idx = books.firstIndex(where: { $0.id == book.id }) {
-                    books[idx].customCoverFilename = result.filename
-                    persist()
+        let targets = books.filter { $0.customCoverFilename == nil }
+        guard !targets.isEmpty else { return }
+
+        var results: [(UUID, String, String?)] = []
+        await withTaskGroup(of: (UUID, String, String?)?.self) { group in
+            for book in targets {
+                group.addTask {
+                    if let res = await BookMetadataService.downloadBestCover(
+                        title: book.title,
+                        author: book.author,
+                        isbn: book.isbn,
+                        coverURLString: book.coverURLString
+                    ) {
+                        return (book.id, res.filename, res.dominantHex)
+                    }
+                    return nil
+                }
+            }
+            for await item in group {
+                if let item { results.append(item) }
+            }
+        }
+
+        guard !results.isEmpty else { return }
+        for (bookId, filename, dominantHex) in results {
+            if let idx = books.firstIndex(where: { $0.id == bookId }) {
+                books[idx].customCoverFilename = filename
+                if let dominantHex, books[idx].spineColorHex.isEmpty {
+                    books[idx].spineColorHex = dominantHex
                 }
             }
         }
+        persist()
     }
 
     // MARK: - CRUD & Drag/Reorder Operations
@@ -536,7 +560,7 @@ public final class LibraryStore: ObservableObject {
             currentPage: 960,
             heightCm: 23.5,
             shelf: .read,
-            displayStyle: .spine,
+            displayStyle: .coverForward,
             spineColorHex: "#1E1A18",
             spineAccentHex: "#E2A648",
             spineTextColorHex: "#F5DEB3",
@@ -627,7 +651,7 @@ public final class LibraryStore: ObservableObject {
             currentPage: 768,
             heightCm: 23.4,
             shelf: .read,
-            displayStyle: .spine,
+            displayStyle: .coverForward,
             spineColorHex: "#B57B3C",
             spineAccentHex: "#1E1814",
             spineTextColorHex: "#1D1610",

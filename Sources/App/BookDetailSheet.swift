@@ -131,8 +131,20 @@ struct BookDetailSheet: View {
                     .padding(.top, 8)
                 }
 
-                // Floating bottom "Anfangen" / "Weiterlesen" Pill Button (like Reel 2!)
+                // Soft bottom dark fade + Floating "Anfangen" / "Weiterlesen" Pill Button
                 if let onStartReading {
+                    VStack {
+                        Spacer()
+                        LinearGradient(
+                            colors: [.clear, Color.black.opacity(0.75)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 105)
+                        .allowsHitTesting(false)
+                    }
+                    .ignoresSafeArea(edges: .bottom)
+
                     Button {
                         store.updateBook(book)
                         onStartReading(book)

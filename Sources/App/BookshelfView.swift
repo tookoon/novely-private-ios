@@ -118,7 +118,19 @@ struct BookshelfView: View {
                     .padding(.top, 6)
                 }
 
-                // Floating "+ Ins Regal" Liquid Glass Pill (exact Reel 1 & 2 placement!)
+                // Soft bottom dark vignette + Floating "+ Ins Regal" Liquid Glass Pill
+                VStack {
+                    Spacer()
+                    LinearGradient(
+                        colors: [.clear, Color.black.opacity(0.65)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 110)
+                    .allowsHitTesting(false)
+                }
+                .ignoresSafeArea(edges: .bottom)
+
                 Button {
                     showingAddBook = true
                 } label: {
@@ -128,7 +140,7 @@ struct BookshelfView: View {
                         .padding(.horizontal, 22)
                         .padding(.vertical, 12)
                         .background(NovelyTheme.creamText, in: Capsule())
-                        .shadow(color: .black.opacity(0.42), radius: 12, y: 5)
+                        .shadow(color: .black.opacity(0.45), radius: 12, y: 5)
                 }
                 .padding(.bottom, 14)
                 .accessibilityIdentifier("addBookFloatingButton")

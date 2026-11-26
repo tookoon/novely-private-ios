@@ -71,11 +71,11 @@ public enum NovelyTheme {
     public static let warmMutedText = Color(hex: "#C5B8A6")
     public static let terracotta = Color(hex: "#D8684D")
     public static let warmGold = Color(hex: "#E8C379")
-    public static let espressoBg = Color(hex: "#1A1411")
+    public static let espressoBg = Color(hex: "#18120E")
     public static let cardDarkBg = Color(hex: "#231B16")
 }
 
-// MARK: - Warm Real Wooden Bookshelf Cabinet Backdrop
+// MARK: - Deeply Recessed Photorealistic Wooden Bookcase Backdrop
 
 public struct BookshelfCabinetBackdrop: View {
     public let settings: ShelfSettings
@@ -99,7 +99,7 @@ public struct BookshelfCabinetBackdrop: View {
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
                 }
-                .overlay(Color.black.opacity(0.22))
+                .overlay(Color.black.opacity(0.25))
             } else if settings.wallTheme.usesWoodTextureImage {
                 GeometryReader { geo in
                     Image("WoodShelfTexture")
@@ -109,13 +109,12 @@ public struct BookshelfCabinetBackdrop: View {
                         .clipped()
                 }
                 .overlay(
-                    // Subtle warm readability vignette at very top & bottom for header/tabbar
                     LinearGradient(
                         stops: [
-                            .init(color: Color(hex: "#1C120B").opacity(0.55), location: 0.0),
-                            .init(color: Color.clear, location: 0.22),
+                            .init(color: Color.black.opacity(0.42), location: 0.0),
+                            .init(color: Color.clear, location: 0.20),
                             .init(color: Color.clear, location: 0.80),
-                            .init(color: Color(hex: "#140D08").opacity(0.55), location: 1.0)
+                            .init(color: Color.black.opacity(0.55), location: 1.0)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -131,34 +130,34 @@ public struct BookshelfCabinetBackdrop: View {
                     endPoint: .bottom
                 )
 
-                // Recessed wooden cabinet side-pillars for real 3D bookshelf feel!
+                // Recessed wooden cabinet side-pillars
                 HStack(spacing: 0) {
                     LinearGradient(
-                        colors: [Color(hex: settings.woodFinish.sideHex), Color.black.opacity(0.35), .clear],
+                        colors: [Color(hex: settings.woodFinish.sideHex), Color.black.opacity(0.45), .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
-                    .frame(width: 18)
+                    .frame(width: 20)
                     Spacer()
                     LinearGradient(
-                        colors: [.clear, Color.black.opacity(0.35), Color(hex: settings.woodFinish.sideHex)],
+                        colors: [.clear, Color.black.opacity(0.45), Color(hex: settings.woodFinish.sideHex)],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
-                    .frame(width: 18)
+                    .frame(width: 20)
                 }
             }
 
-            // Warm top gallery spotlight
+            // Soft gallery top spotlight
             if settings.warmSpotlightsEnabled {
                 RadialGradient(
                     colors: [
-                        Color(hex: "#FFD28A").opacity(0.22),
+                        Color(hex: "#FFD99B").opacity(0.18),
                         Color.clear
                     ],
                     center: .top,
-                    startRadius: 15,
-                    endRadius: 340
+                    startRadius: 20,
+                    endRadius: 360
                 )
                 .allowsHitTesting(false)
             }
@@ -167,7 +166,7 @@ public struct BookshelfCabinetBackdrop: View {
     }
 }
 
-// MARK: - Draped Fairy Light String with Real Swagged Cord & Warm Bulbs
+// MARK: - Delicate Draped Fairy Light String with Real Swagged Wire Cord
 
 public struct DrapedFairyLightString: View {
     public let compact: Bool
@@ -181,10 +180,10 @@ public struct DrapedFairyLightString: View {
             let w = geo.size.width
             let swags = compact ? 3 : 4
             let segW = w / CGFloat(swags)
-            let dip: CGFloat = compact ? 7 : 12
+            let dip: CGFloat = compact ? 6.5 : 11.5
 
             ZStack {
-                // Fine dark-bronze draped wire cord (catenary swags)
+                // Fine dark-copper swagged wire cord
                 Path { path in
                     path.move(to: CGPoint(x: 4, y: 1))
                     for i in 0..<swags {
@@ -198,48 +197,45 @@ public struct DrapedFairyLightString: View {
                     }
                 }
                 .stroke(
-                    Color(hex: "#2A1F18").opacity(0.88),
-                    style: StrokeStyle(lineWidth: compact ? 1.0 : 1.35, lineCap: .round)
+                    Color(hex: "#1F1610").opacity(0.9),
+                    style: StrokeStyle(lineWidth: compact ? 0.9 : 1.15, lineCap: .round)
                 )
 
-                // Warm glowing fairy bulbs attached right onto the curved cord!
+                // Warm bokeh fairy bulbs along the cord
                 ForEach(0..<swags, id: \.self) { i in
                     let x0 = 4 + CGFloat(i) * (segW - 2)
                     let x1 = min(4 + CGFloat(i + 1) * (segW - 2), w - 4)
                     ForEach([0.22, 0.50, 0.78], id: \.self) { t in
                         let bx = x0 + (x1 - x0) * CGFloat(t)
-                        // Quadratic Bezier y(t) = 2(1-t)t * controlY + (1-t)^2 * y0 + t^2 * y1
                         let by = 1 + 2 * CGFloat(1 - t) * CGFloat(t) * (dip * 2.0)
 
                         ZStack {
-                            // Soft golden light halo
                             Circle()
-                                .fill(Color(hex: "#FFC45C").opacity(0.45))
-                                .frame(width: compact ? 11 : 16, height: compact ? 11 : 16)
-                                .blur(radius: compact ? 3 : 4.5)
+                                .fill(Color(hex: "#FFC766").opacity(0.42))
+                                .frame(width: compact ? 11 : 17, height: compact ? 11 : 17)
+                                .blur(radius: compact ? 3 : 5)
 
-                            // Tiny dark socket + bright warm bulb
                             VStack(spacing: -0.5) {
                                 Rectangle()
-                                    .fill(Color(hex: "#3B2D23"))
-                                    .frame(width: compact ? 2 : 2.6, height: compact ? 2 : 2.8)
+                                    .fill(Color(hex: "#2D2118"))
+                                    .frame(width: compact ? 1.8 : 2.3, height: compact ? 1.8 : 2.4)
                                 Ellipse()
-                                    .fill(Color(hex: "#FFF3CC"))
-                                    .frame(width: compact ? 3.8 : 5.2, height: compact ? 4.8 : 6.4)
-                                    .shadow(color: Color(hex: "#FFB732"), radius: compact ? 2.5 : 4)
+                                    .fill(Color(hex: "#FFF6D9"))
+                                    .frame(width: compact ? 3.5 : 4.8, height: compact ? 4.4 : 5.8)
+                                    .shadow(color: Color(hex: "#FFB732"), radius: compact ? 2 : 3.5)
                             }
                         }
-                        .position(x: bx, y: by + (compact ? 2.2 : 3.2))
+                        .position(x: bx, y: by + (compact ? 2.0 : 3.0))
                     }
                 }
             }
         }
-        .frame(height: compact ? 16 : 24)
+        .frame(height: compact ? 15 : 23)
         .allowsHitTesting(false)
     }
 }
 
-// MARK: - Wooden Shelf Plank with Realistic Wood Grain & Draped Fairy Lights
+// MARK: - Photorealistic 3D Wooden Shelf Plank + Deep Ambient Occlusion Cast Shadow
 
 public struct WoodenShelfPlank: View {
     public let woodFinish: WoodFinish
@@ -254,61 +250,65 @@ public struct WoodenShelfPlank: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Top surface ledge (3D perspective depth where books & cat rest)
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(hex: woodFinish.topHex).opacity(0.62),
-                            Color(hex: woodFinish.topHex)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(height: compact ? 6 : 10)
-                .overlay(alignment: .bottom) {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.22))
-                        .frame(height: 0.8)
-                }
-
-            // Thick front edge of wooden plank with realistic wood grain
+            // 3D recessed top shelf surface (darker toward the back wall!)
             ZStack {
+                Image("ShelfPlankTexture")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: compact ? 6 : 10)
+                    .clipped()
+
+                Color(hex: woodFinish.topHex).opacity(0.32)
+
                 LinearGradient(
-                    colors: [
-                        Color(hex: woodFinish.frontHex),
-                        Color(hex: woodFinish.sideHex),
-                        Color.black.opacity(0.55)
-                    ],
+                    colors: [Color.black.opacity(0.55), Color.black.opacity(0.15), Color.white.opacity(0.14)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
-
-                VStack(spacing: compact ? 2 : 3.5) {
-                    Rectangle().fill(Color.black.opacity(0.16)).frame(height: 1)
-                    Rectangle().fill(Color.white.opacity(0.08)).frame(height: 0.7)
-                    Rectangle().fill(Color.black.opacity(0.12)).frame(height: 1)
-                }
-                .padding(.horizontal, 6)
             }
-            .frame(height: compact ? 11 : 17)
-            .clipShape(RoundedRectangle(cornerRadius: 2.5))
-            .shadow(color: Color.black.opacity(0.58), radius: compact ? 5 : 10, x: 0, y: compact ? 4 : 8)
+            .frame(height: compact ? 6 : 10)
+            .clipped()
 
-            // Real draped fairy light string hanging right underneath the shelf edge!
-            if fairyLightsEnabled {
-                DrapedFairyLightString(compact: compact)
-                    .padding(.horizontal, 6)
-                    .offset(y: -2)
-            } else {
-                Spacer().frame(height: compact ? 4 : 8)
+            // Photorealistic horizontal wood grain front shelf lip
+            ZStack {
+                Image("ShelfPlankTexture")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: compact ? 10 : 14)
+                    .clipped()
+
+                Color(hex: woodFinish.frontHex).opacity(0.35)
+
+                LinearGradient(
+                    colors: [Color.white.opacity(0.12), Color.clear, Color.black.opacity(0.55)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+            .frame(height: compact ? 10 : 14)
+            .clipShape(RoundedRectangle(cornerRadius: 2))
+            .shadow(color: Color.black.opacity(0.72), radius: compact ? 4 : 8, x: 0, y: compact ? 3 : 6)
+
+            // Deep ambient occlusion shadow cast downward onto the compartment below + fairy lights
+            ZStack(alignment: .top) {
+                LinearGradient(
+                    colors: [Color.black.opacity(0.65), Color.black.opacity(0.22), Color.clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: compact ? 16 : 28)
+
+                if fairyLightsEnabled {
+                    DrapedFairyLightString(compact: compact)
+                        .padding(.horizontal, 6)
+                        .offset(y: -2)
+                }
             }
         }
     }
 }
 
-// MARK: - Realistic 3D Book Spine
+// MARK: - Photorealistic 3D Book Spine
 
 public struct BookSpineView: View {
     public let book: Book
@@ -327,14 +327,10 @@ public struct BookSpineView: View {
     private var titleFont: Font {
         let size = max(8.5, 11.5 * scale)
         switch book.spineTypography {
-        case .serif:
-            return .system(size: size, weight: .semibold, design: .serif)
-        case .modern:
-            return .system(size: size, weight: .bold, design: .rounded)
-        case .condensed:
-            return .system(size: size, weight: .medium, design: .serif).italic()
-        case .ornate:
-            return .system(size: size, weight: .heavy, design: .serif)
+        case .serif: return .system(size: size, weight: .semibold, design: .serif)
+        case .modern: return .system(size: size, weight: .bold, design: .rounded)
+        case .condensed: return .system(size: size, weight: .medium, design: .serif).italic()
+        case .ornate: return .system(size: size, weight: .heavy, design: .serif)
         }
     }
 
@@ -350,12 +346,12 @@ public struct BookSpineView: View {
                     .frame(width: width, height: height)
                     .clipped()
             } else {
-                RoundedRectangle(cornerRadius: 3 * scale, style: .continuous)
+                RoundedRectangle(cornerRadius: 2.5 * scale, style: .continuous)
                     .fill(Color(hex: book.spineColorHex))
 
-                // Subtle cloth/linen texture gradient
+                // Soft warm overhead shelf illumination gradient
                 LinearGradient(
-                    colors: [.white.opacity(0.08), .clear, .black.opacity(0.14)],
+                    colors: [.white.opacity(0.14), .clear, .black.opacity(0.28)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -363,7 +359,7 @@ public struct BookSpineView: View {
                 VStack {
                     Rectangle()
                         .fill(Color(hex: book.spineAccentHex).opacity(0.85))
-                        .frame(height: max(2, 3.2 * scale))
+                        .frame(height: max(2, 3.0 * scale))
                         .padding(.top, 9 * scale)
                     Spacer()
                     if let idx = book.seriesIndex {
@@ -374,7 +370,7 @@ public struct BookSpineView: View {
                     }
                     Rectangle()
                         .fill(Color(hex: book.spineAccentHex).opacity(0.85))
-                        .frame(height: max(2, 3.2 * scale))
+                        .frame(height: max(2, 3.0 * scale))
                         .padding(.bottom, 9 * scale)
                 }
 
@@ -389,20 +385,26 @@ public struct BookSpineView: View {
                     .offset(y: book.seriesIndex != nil ? -5 * scale : 0)
             }
 
-            // 3D cylindrical spine shading
+            // Realistic cylindrical spine curve + recessed book hinge grooves
             LinearGradient(
                 stops: [
-                    .init(color: .black.opacity(0.32), location: 0.0),
-                    .init(color: .white.opacity(0.24), location: 0.14),
-                    .init(color: .white.opacity(0.04), location: 0.40),
-                    .init(color: .black.opacity(0.06), location: 0.72),
-                    .init(color: .black.opacity(0.42), location: 1.0)
+                    .init(color: .black.opacity(0.40), location: 0.0),
+                    .init(color: .white.opacity(0.22), location: 0.14),
+                    .init(color: .white.opacity(0.03), location: 0.40),
+                    .init(color: .black.opacity(0.12), location: 0.78),
+                    .init(color: .black.opacity(0.48), location: 1.0)
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
             )
 
-            // Lent-to borrower badge
+            // Double hinge grooves
+            HStack {
+                Rectangle().fill(.black.opacity(0.25)).frame(width: 1).padding(.leading, 3.5 * scale)
+                Spacer()
+                Rectangle().fill(.black.opacity(0.25)).frame(width: 1).padding(.trailing, 3.5 * scale)
+            }
+
             if let borrower = book.lentTo, !borrower.isEmpty, scale >= 0.75 {
                 VStack {
                     Spacer()
@@ -417,12 +419,13 @@ public struct BookSpineView: View {
             }
         }
         .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: 3 * scale, style: .continuous))
-        .shadow(color: .black.opacity(0.48), radius: 3.5 * scale, x: 2 * scale, y: 2.5 * scale)
+        .clipShape(RoundedRectangle(cornerRadius: 2.5 * scale, style: .continuous))
+        .shadow(color: .black.opacity(0.62), radius: 5 * scale, x: 3 * scale, y: 3 * scale)
+        .offset(y: 4 * scale)
     }
 }
 
-// MARK: - Front-Facing Real Book Cover on Shelf
+// MARK: - Photorealistic Front-Facing Real Book Cover with 3D Page Block & Cast Shadow
 
 public struct BookCoverForwardView: View {
     public let book: Book
@@ -442,49 +445,69 @@ public struct BookCoverForwardView: View {
         let height = book.spineHeightPoints * scale
         let width = height * 0.67
 
-        ZStack {
-            if let uiImage = localCoverImage {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: width, height: height)
-                    .clipped()
-            } else if let urlStr = book.coverURLString, let url = URL(string: urlStr) {
-                AsyncImage(url: url) { phase in
-                    if case .success(let image) = phase {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: width, height: height)
-                            .clipped()
-                    } else {
-                        styledFallbackCover(width: width, height: height)
+        HStack(spacing: 0) {
+            ZStack {
+                if let uiImage = localCoverImage {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: width, height: height)
+                        .clipped()
+                } else if let urlStr = book.coverURLString, let url = URL(string: urlStr) {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: width, height: height)
+                                .clipped()
+                        } else {
+                            styledFallbackCover(width: width, height: height)
+                        }
                     }
+                } else {
+                    styledFallbackCover(width: width, height: height)
                 }
-            } else {
-                styledFallbackCover(width: width, height: height)
-            }
 
-            // Realistic book hinge crease + subtle hardcover gloss
-            HStack(spacing: 0) {
+                // Book hinge crease on left
+                HStack(spacing: 0) {
+                    LinearGradient(
+                        colors: [.black.opacity(0.38), .white.opacity(0.20), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: 7 * scale)
+                    Spacer()
+                }
+
+                // Warm top-down lighting + bottom shadow grounding
                 LinearGradient(
-                    colors: [.black.opacity(0.36), .white.opacity(0.22), .clear],
-                    startPoint: .leading,
-                    endPoint: .trailing
+                    colors: [.white.opacity(0.10), .clear, .black.opacity(0.26)],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
-                .frame(width: 8 * scale)
-                Spacer()
             }
+            .frame(width: width, height: height)
+            .clipShape(RoundedRectangle(cornerRadius: 3 * scale, style: .continuous))
 
-            LinearGradient(
-                colors: [.white.opacity(0.14), .clear, .black.opacity(0.16)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            // Realistic 3D page block thickness on right edge!
+            if scale >= 0.55 {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: book.isSpecialEdition
+                                ? [Color(hex: book.spineAccentHex), Color(hex: book.spineColorHex)]
+                                : [Color(hex: "#EDE4D3"), Color(hex: "#C8BDAA")],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: 2.5 * scale, height: height - 3 * scale)
+                    .clipShape(RoundedRectangle(cornerRadius: 1))
+            }
         }
-        .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: 4 * scale, style: .continuous))
-        .shadow(color: .black.opacity(0.52), radius: 5 * scale, x: 2 * scale, y: 3 * scale)
+        .shadow(color: .black.opacity(0.66), radius: 6 * scale, x: 3.5 * scale, y: 3.5 * scale)
+        .offset(y: 4 * scale)
     }
 
     @ViewBuilder
@@ -553,7 +576,7 @@ public struct BookStackView: View {
                         .fill(Color(hex: book.spineColorHex))
 
                     LinearGradient(
-                        colors: [.white.opacity(0.22), .clear, .black.opacity(0.35)],
+                        colors: [.white.opacity(0.20), .clear, .black.opacity(0.38)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -578,16 +601,17 @@ public struct BookStackView: View {
                 }
                 .frame(width: stackWidth, height: stackHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 2.5 * scale))
-                .shadow(color: .black.opacity(0.45), radius: 2.5 * scale, x: 0, y: 1.5 * scale)
+                .shadow(color: .black.opacity(0.55), radius: 3.5 * scale, x: 1 * scale, y: 2 * scale)
                 .onTapGesture {
                     onTapBook?(book)
                 }
             }
         }
+        .offset(y: 4 * scale)
     }
 }
 
-// MARK: - Illustrated Cozy Shelf Decor (Sleeping Cat, Potted Plant, Snowman, Candle)
+// MARK: - Photorealistic Shelf Decor (Flat Sleeping Cat, Real Plant, Real Lit Candle, Snowman)
 
 public struct ShelfDecorView: View {
     public let kind: DecorKind
@@ -604,98 +628,77 @@ public struct ShelfDecorView: View {
         switch kind {
         case .sleepingCat:
             ZStack(alignment: .bottom) {
-                // Grounded dark contact shadow directly on the wooden shelf surface
                 Ellipse()
-                    .fill(Color.black.opacity(0.68))
-                    .frame(width: 82 * scale, height: 11 * scale)
-                    .blur(radius: 4 * scale)
-                    .offset(y: 3 * scale)
+                    .fill(Color.black.opacity(0.75))
+                    .frame(width: 94 * scale, height: 8 * scale)
+                    .blur(radius: 3 * scale)
+                    .offset(y: 2 * scale)
 
                 Image("DecorSleepingCat")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 98 * scale, height: 64 * scale)
-                    .shadow(color: .black.opacity(0.42), radius: 2.5 * scale, x: 0, y: 2 * scale)
+                    .frame(width: 104 * scale, height: 32 * scale)
+                    .shadow(color: .black.opacity(0.45), radius: 3 * scale, x: 1 * scale, y: 2 * scale)
             }
-            .offset(y: 8 * scale)
+            .offset(y: 7 * scale)
         case .monstera:
             let growthFactor = 0.68 + Double(min(5, max(1, plantStage))) * 0.075
             ZStack(alignment: .bottom) {
                 Ellipse()
-                    .fill(Color.black.opacity(0.62))
-                    .frame(width: 44 * scale * growthFactor, height: 9 * scale)
-                    .blur(radius: 3.5 * scale)
-                    .offset(y: 3 * scale)
+                    .fill(Color.black.opacity(0.68))
+                    .frame(width: 44 * scale * growthFactor, height: 8 * scale)
+                    .blur(radius: 3 * scale)
+                    .offset(y: 2 * scale)
 
                 Image("DecorPottedPlant")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 68 * scale * growthFactor, height: 78 * scale * growthFactor)
-                    .shadow(color: .black.opacity(0.38), radius: 2.5 * scale, x: 0, y: 2 * scale)
+                    .frame(width: 66 * scale * growthFactor, height: 76 * scale * growthFactor)
+                    .shadow(color: .black.opacity(0.45), radius: 3.5 * scale, x: 1.5 * scale, y: 2 * scale)
+            }
+            .offset(y: 7 * scale)
+        case .candle:
+            ZStack(alignment: .bottom) {
+                Ellipse()
+                    .fill(Color.black.opacity(0.70))
+                    .frame(width: 44 * scale, height: 7 * scale)
+                    .blur(radius: 2.5 * scale)
+                    .offset(y: 2 * scale)
+
+                // Soft warm flame halo behind candle top
+                Circle()
+                    .fill(Color(hex: "#FFBE5C").opacity(0.38))
+                    .frame(width: 36 * scale, height: 36 * scale)
+                    .blur(radius: 9 * scale)
+                    .offset(y: -46 * scale)
+
+                Image("DecorCandle")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 48 * scale, height: 68 * scale)
+                    .shadow(color: .black.opacity(0.45), radius: 3 * scale, x: 1.5 * scale, y: 2 * scale)
             }
             .offset(y: 7 * scale)
         case .snowman:
             ZStack(alignment: .bottom) {
                 Ellipse()
-                    .fill(Color.black.opacity(0.55))
-                    .frame(width: 38 * scale, height: 8 * scale)
-                    .blur(radius: 3 * scale)
+                    .fill(Color.black.opacity(0.60))
+                    .frame(width: 38 * scale, height: 7 * scale)
+                    .blur(radius: 2.5 * scale)
                     .offset(y: 2 * scale)
 
                 Image("DecorSnowman")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 54 * scale, height: 66 * scale)
+                    .frame(width: 52 * scale, height: 64 * scale)
+                    .shadow(color: .black.opacity(0.42), radius: 3 * scale, x: 1.5 * scale, y: 2 * scale)
             }
             .offset(y: 6 * scale)
-        case .candle:
-            candleView
         case .snowGlobe:
             snowGlobeView
         case .coffeeMug:
             coffeeMugView
         }
-    }
-
-    private var candleView: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                Circle()
-                    .fill(Color(hex: "#FFB347").opacity(0.5))
-                    .frame(width: 28 * scale, height: 28 * scale)
-                    .blur(radius: 7 * scale)
-                Ellipse()
-                    .fill(
-                        LinearGradient(
-                            colors: [.white, Color(hex: "#FFD166"), Color(hex: "#F77F00")],
-                            startPoint: .bottom,
-                            endPoint: .top
-                        )
-                    )
-                    .frame(width: 6 * scale, height: 11 * scale)
-            }
-            .offset(y: 3 * scale)
-
-            RoundedRectangle(cornerRadius: 3 * scale)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(hex: "#F8F0DF"), Color(hex: "#DFCEB4"), Color(hex: "#BAA586")],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(width: 22 * scale, height: 42 * scale)
-                .overlay(alignment: .top) {
-                    Ellipse()
-                        .fill(Color(hex: "#FFF7E6"))
-                        .frame(width: 20 * scale, height: 5 * scale)
-                }
-
-            RoundedRectangle(cornerRadius: 2 * scale)
-                .fill(Color(hex: "#8A6D3B"))
-                .frame(width: 28 * scale, height: 5 * scale)
-        }
-        .shadow(color: .black.opacity(0.45), radius: 3 * scale, y: 2 * scale)
     }
 
     private var snowGlobeView: some View {
@@ -725,7 +728,8 @@ public struct ShelfDecorView: View {
                 .fill(Color(hex: "#4A2E1E"))
                 .frame(width: 28 * scale, height: 10 * scale)
         }
-        .shadow(color: .black.opacity(0.45), radius: 3 * scale, y: 2 * scale)
+        .shadow(color: .black.opacity(0.50), radius: 3 * scale, y: 2 * scale)
+        .offset(y: 5 * scale)
     }
 
     private var coffeeMugView: some View {
@@ -749,11 +753,12 @@ public struct ShelfDecorView: View {
                     .frame(width: 11 * scale, height: 11 * scale)
             }
         }
-        .shadow(color: .black.opacity(0.45), radius: 3 * scale, y: 2 * scale)
+        .shadow(color: .black.opacity(0.50), radius: 3 * scale, y: 2 * scale)
+        .offset(y: 5 * scale)
     }
 }
 
-// MARK: - Complete Shelf Tier (Books + Stacks + Movable Decor + Wooden Plank + Draped Fairy Lights)
+// MARK: - Complete Shelf Tier (Lit Compartment + Books + Stacks + Movable Decor + Real Wood Plank)
 
 public struct BookshelfTierView: View {
     public let books: [Book]
@@ -816,40 +821,52 @@ public struct BookshelfTierView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .bottom, spacing: 5 * scale) {
-                ForEach(leftDecor) { item in
-                    decorInteractive(item)
-                }
+            ZStack(alignment: .bottom) {
+                // Soft warm compartment light glow behind books
+                RadialGradient(
+                    colors: [Color(hex: "#FFCA7A").opacity(0.14), Color.clear],
+                    center: .center,
+                    startRadius: 10,
+                    endRadius: 170 * scale
+                )
+                .frame(height: 118 * scale)
+                .allowsHitTesting(false)
 
-                if !stackedBooks.isEmpty {
-                    BookStackView(books: stackedBooks, scale: scale, onTapBook: onTapBook)
-                        .padding(.trailing, 3 * scale)
-                }
+                HStack(alignment: .bottom, spacing: 5 * scale) {
+                    ForEach(leftDecor) { item in
+                        decorInteractive(item)
+                    }
 
-                let splitIndex = uprightBooks.count / 2
-                ForEach(Array(uprightBooks.enumerated()), id: \.element.id) { idx, book in
-                    if idx == splitIndex {
+                    if !stackedBooks.isEmpty {
+                        BookStackView(books: stackedBooks, scale: scale, onTapBook: onTapBook)
+                            .padding(.trailing, 3 * scale)
+                    }
+
+                    let splitIndex = uprightBooks.count / 2
+                    ForEach(Array(uprightBooks.enumerated()), id: \.element.id) { idx, book in
+                        if idx == splitIndex {
+                            ForEach(middleDecor) { item in
+                                decorInteractive(item)
+                            }
+                        }
+                        bookInteractive(book)
+                    }
+
+                    if uprightBooks.isEmpty {
                         ForEach(middleDecor) { item in
                             decorInteractive(item)
                         }
                     }
-                    bookInteractive(book)
-                }
 
-                if uprightBooks.isEmpty {
-                    ForEach(middleDecor) { item in
+                    Spacer(minLength: 4 * scale)
+
+                    ForEach(rightDecor) { item in
                         decorInteractive(item)
                     }
                 }
-
-                Spacer(minLength: 4 * scale)
-
-                ForEach(rightDecor) { item in
-                    decorInteractive(item)
-                }
+                .padding(.horizontal, 18 * scale)
+                .frame(minHeight: 120 * scale, alignment: .bottom)
             }
-            .padding(.horizontal, 16 * scale)
-            .frame(minHeight: 118 * scale, alignment: .bottom)
             .zIndex(2)
 
             WoodenShelfPlank(
@@ -857,7 +874,7 @@ public struct BookshelfTierView: View {
                 fairyLightsEnabled: fairyLightsEnabled,
                 compact: scale < 0.75
             )
-            .padding(.horizontal, 6 * scale)
+            .padding(.horizontal, 8 * scale)
             .zIndex(1)
         }
     }
