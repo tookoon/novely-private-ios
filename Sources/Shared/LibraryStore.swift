@@ -209,6 +209,47 @@ public final class LibraryStore: ObservableObject {
         persist()
     }
 
+    /// Direct Drag & Drop reordering onto any target book
+    public func reorderBook(draggedId: UUID, onto targetId: UUID) {
+        guard draggedId != targetId else { return }
+        var shelfList = activeShelfBooks
+        guard let fromIdx = shelfList.firstIndex(where: { $0.id == draggedId }),
+              let toIdx = shelfList.firstIndex(where: { $0.id == targetId }) else { return }
+        let moved = shelfList.remove(at: fromIdx)
+        shelfList.insert(moved, at: toIdx)
+        reassignSortOrder(for: shelfList)
+    }
+
+    /// Drop onto the end of a shelf row
+    public func moveBookToRowEnd(draggedId: UUID, afterBookId: UUID?) {
+        var shelfList = activeShelfBooks
+        guard let fromIdx = shelfList.firstIndex(where: { $0.id == draggedId }) else { return }
+        let moved = shelfList.remove(at: fromIdx)
+        if let afterBookId, let afterIdx = shelfList.firstIndex(where: { $0.id == afterBookId }) {
+            shelfList.insert(moved, at: afterIdx + 1)
+        } else {
+            shelfList.append(moved)
+        }
+        reassignSortOrder(for: shelfList)
+    }
+
+    private func reassignSortOrder(for orderedList: [Book]) {
+        let base = (books.map(\.sortOrder).min() ?? 0)
+        for (offset, item) in orderedList.enumerated() {
+            if let idx = books.firstIndex(where: { $0.id == item.id }) {
+                books[idx].sortOrder = base + offset
+            }
+        }
+        persist()
+    }
+
+    public func moveDecorItem(decorId: UUID, toRow: Int, slotIndex: Int) {
+        guard let idx = decor.firstIndex(where: { $0.id == decorId }) else { return }
+        decor[idx].rowIndex = min(4, max(0, toRow))
+        decor[idx].slotIndex = min(2, max(0, slotIndex))
+        persist()
+    }
+
     public func cycleDisplayStyle(for book: Book) {
         guard let idx = books.firstIndex(where: { $0.id == book.id }) else { return }
         let all = BookDisplayStyle.allCases
@@ -792,6 +833,54 @@ public final class LibraryStore: ObservableObject {
             sortOrder: 8
         )
 
+        let b10 = Book(
+            title: "Animal Farm",
+            author: "George Orwell",
+            isbn: "9780141036137",
+            publisher: "Penguin",
+            publishedYear: "1945",
+            bindingType: "Taschenbuch",
+            bookDescription: "Auf einer englischen Farm proben die Tiere den Aufstand gegen den Bauern – doch bald zeigen sich neue Machtstrukturen.",
+            pageCount: 144,
+            currentPage: 144,
+            heightCm: 18.5,
+            shelf: .read,
+            displayStyle: .spine,
+            spineColorHex: "#3C4F3D",
+            spineAccentHex: "#E3B873",
+            spineTextColorHex: "#F4ECE0",
+            spineTypography: .serif,
+            rating: 5.0,
+            tropes: ["Klassiker", "Dystopie"],
+            purchasePrice: 11.00,
+            dateFinished: cal.date(byAdding: .day, value: -10, to: now),
+            sortOrder: 9
+        )
+
+        let b11 = Book(
+            title: "Der Schatten des Windes",
+            author: "Carlos Ruiz Zafón",
+            isbn: "9783518458006",
+            publisher: "Suhrkamp",
+            publishedYear: "2003",
+            bindingType: "Taschenbuch",
+            bookDescription: "Barcelona, 1945: Der zehnjährige Daniel wird von seinem Vater zum Friedhof der Vergessenen Bücher geführt und wählt ein geheimnisvolles Buch aus.",
+            pageCount: 564,
+            currentPage: 564,
+            heightCm: 21.0,
+            shelf: .read,
+            displayStyle: .spine,
+            spineColorHex: "#263B4D",
+            spineAccentHex: "#C9A86A",
+            spineTextColorHex: "#EFE6D5",
+            spineTypography: .serif,
+            rating: 5.0,
+            tropes: ["Dark Academia", "Klassiker", "Plot Twist"],
+            purchasePrice: 16.00,
+            dateFinished: cal.date(byAdding: .day, value: -20, to: now),
+            sortOrder: 10
+        )
+
         // Currently Reading
         let c1 = Book(
             title: "Yellowface",
@@ -945,7 +1034,7 @@ public final class LibraryStore: ObservableObject {
             sortOrder: 14
         )
 
-        self.books = [b1, b2, b3, b4, b5, b6, b7, b8, b9, c1, c2, u1, u2, w1, l1]
+        self.books = [b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, c1, c2, u1, u2, w1, l1]
 
         var generatedSessions: [ReadingSession] = []
         let calendarBooks = [c1, c2, b1, b2, b3, b4, b8, b9]

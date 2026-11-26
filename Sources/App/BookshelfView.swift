@@ -21,25 +21,26 @@ struct BookshelfView: View {
 
     private var shelfRows: [[Book]] {
         let list = currentBooks
-        guard !list.isEmpty else { return [[]] } // Always show at least 2 cozy shelves with cat & plant!
+        guard !list.isEmpty else { return [[]] }
         var rows: [[Book]] = []
         var currentRow: [Book] = []
         var currentUnits: CGFloat = 0
+        let shelfScale: CGFloat = 0.84
 
         for book in list {
             let units: CGFloat = {
                 switch book.displayStyle {
-                case .spine: return book.spineWidthPoints + 5
-                case .coverForward: return book.spineHeightPoints * 0.67 + 8
+                case .spine: return book.spineWidthPoints * shelfScale + 3.5
+                case .coverForward: return book.spineHeightPoints * 0.67 * shelfScale + 5
                 case .stacked:
-                    return currentRow.contains(where: { $0.displayStyle == .stacked }) ? 0 : 112
+                    return currentRow.contains(where: { $0.displayStyle == .stacked }) ? 0 : 94
                 }
             }()
 
-            if currentUnits + units > 250 && !currentRow.isEmpty {
+            if currentUnits + units > 335 && !currentRow.isEmpty {
                 rows.append(currentRow)
                 currentRow = [book]
-                currentUnits = max(units, 40)
+                currentUnits = max(units, 28)
             } else {
                 currentRow.append(book)
                 currentUnits += units
@@ -49,7 +50,7 @@ struct BookshelfView: View {
             rows.append(currentRow)
         }
         if rows.count == 1 {
-            rows.append([]) // Second cozy shelf tier for decor/plant
+            rows.append([])
         }
         return rows
     }
@@ -72,13 +73,13 @@ struct BookshelfView: View {
                         shelfCategoryBar
 
                         if isEditingShelf {
-                            Text("Tippe auf ein Buch für Rücken/Cover/Stapel · Pfeile oder Wischen zum Verschieben von Büchern & Deko")
+                            Text("Ziehe Bücher & Deko einfach per Finger an eine neue Stelle · Tippe im Bearbeiten-Modus für Rücken/Cover/Stapel")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(NovelyTheme.warmGold)
                                 .padding(.horizontal, 18)
                         }
 
-                        // Realistic 3D Wooden Bookshelf Tiers
+                        // Realistic 3D Wooden Bookshelf Tiers (5-9 books per row + direct Drag & Drop!)
                         VStack(spacing: 14) {
                             ForEach(Array(shelfRows.enumerated()), id: \.offset) { rowIndex, rowBooks in
                                 let rowDecor = store.decor.filter { $0.rowIndex == rowIndex && $0.isEnabled }
@@ -87,7 +88,7 @@ struct BookshelfView: View {
                                     decorItems: rowDecor,
                                     woodFinish: store.settings.woodFinish,
                                     fairyLightsEnabled: store.settings.fairyLightsEnabled,
-                                    scale: 1.0,
+                                    scale: 0.84,
                                     plantStage: store.plantGrowthStage,
                                     isEditing: isEditingShelf,
                                     onTapBook: { book in
@@ -101,6 +102,15 @@ struct BookshelfView: View {
                                     },
                                     onShiftDecor: { item, delta in
                                         store.shiftDecor(item, slotDelta: delta)
+                                    },
+                                    onReorderBook: { draggedId, targetId in
+                                        store.reorderBook(draggedId: draggedId, onto: targetId)
+                                    },
+                                    onMoveBookToRowEnd: { draggedId, afterId in
+                                        store.moveBookToRowEnd(draggedId: draggedId, afterBookId: afterId)
+                                    },
+                                    onDropDecor: { decorId, slotIdx in
+                                        store.moveDecorItem(decorId: decorId, toRow: rowIndex, slotIndex: slotIdx)
                                     }
                                 )
                             }

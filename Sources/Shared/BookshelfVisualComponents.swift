@@ -630,14 +630,14 @@ public struct ShelfDecorView: View {
             ZStack(alignment: .bottom) {
                 Ellipse()
                     .fill(Color.black.opacity(0.75))
-                    .frame(width: 94 * scale, height: 8 * scale)
-                    .blur(radius: 3 * scale)
+                    .frame(width: 82 * scale, height: 9 * scale)
+                    .blur(radius: 3.5 * scale)
                     .offset(y: 2 * scale)
 
                 Image("DecorSleepingCat")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 104 * scale, height: 32 * scale)
+                    .frame(width: 96 * scale, height: 52 * scale)
                     .shadow(color: .black.opacity(0.45), radius: 3 * scale, x: 1 * scale, y: 2 * scale)
             }
             .offset(y: 7 * scale)
@@ -772,6 +772,9 @@ public struct BookshelfTierView: View {
     public let onMoveBook: ((Book, Int) -> Void)?
     public let onCycleStyle: ((Book) -> Void)?
     public let onShiftDecor: ((ShelfDecorItem, Int) -> Void)?
+    public let onReorderBook: ((UUID, UUID) -> Void)?
+    public let onMoveBookToRowEnd: ((UUID, UUID?) -> Void)?
+    public let onDropDecor: ((UUID, Int) -> Void)?
 
     public init(
         books: [Book],
@@ -784,7 +787,10 @@ public struct BookshelfTierView: View {
         onTapBook: ((Book) -> Void)? = nil,
         onMoveBook: ((Book, Int) -> Void)? = nil,
         onCycleStyle: ((Book) -> Void)? = nil,
-        onShiftDecor: ((ShelfDecorItem, Int) -> Void)? = nil
+        onShiftDecor: ((ShelfDecorItem, Int) -> Void)? = nil,
+        onReorderBook: ((UUID, UUID) -> Void)? = nil,
+        onMoveBookToRowEnd: ((UUID, UUID?) -> Void)? = nil,
+        onDropDecor: ((UUID, Int) -> Void)? = nil
     ) {
         self.books = books
         self.decorItems = decorItems
@@ -797,6 +803,9 @@ public struct BookshelfTierView: View {
         self.onMoveBook = onMoveBook
         self.onCycleStyle = onCycleStyle
         self.onShiftDecor = onShiftDecor
+        self.onReorderBook = onReorderBook
+        self.onMoveBookToRowEnd = onMoveBookToRowEnd
+        self.onDropDecor = onDropDecor
     }
 
     private var uprightBooks: [Book] {
@@ -832,7 +841,7 @@ public struct BookshelfTierView: View {
                 .frame(height: 118 * scale)
                 .allowsHitTesting(false)
 
-                HStack(alignment: .bottom, spacing: 5 * scale) {
+                HStack(alignment: .bottom, spacing: 3.5 * scale) {
                     ForEach(leftDecor) { item in
                         decorInteractive(item)
                     }
@@ -864,8 +873,28 @@ public struct BookshelfTierView: View {
                         decorInteractive(item)
                     }
                 }
-                .padding(.horizontal, 18 * scale)
-                .frame(minHeight: 120 * scale, alignment: .bottom)
+                .padding(.horizontal, 14 * scale)
+                .frame(minHeight: 112 * scale, alignment: .bottom)
+            }
+            .contentShape(Rectangle())
+            .dropDestination(for: String.self) { items, location in
+                guard let payload = items.first else { return false }
+                if payload.hasPrefix("book:"),
+                   let draggedUUID = UUID(uuidString: String(payload.dropFirst(5))) {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        onMoveBookToRowEnd?(draggedUUID, books.last?.id)
+                    }
+                    return true
+                }
+                if payload.hasPrefix("decor:"),
+                   let decorUUID = UUID(uuidString: String(payload.dropFirst(6))) {
+                    let slot = location.x < 125 ? 0 : (location.x < 250 ? 1 : 2)
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        onDropDecor?(decorUUID, slot)
+                    }
+                    return true
+                }
+                return false
             }
             .zIndex(2)
 
@@ -912,6 +941,25 @@ public struct BookshelfTierView: View {
             .accessibilityLabel(book.title)
             .accessibilityAddTraits(.isButton)
             .accessibilityIdentifier("bookItem_\(book.title)")
+            .draggable("book:\(book.id.uuidString)")
+            .dropDestination(for: String.self) { items, _ in
+                guard let payload = items.first else { return false }
+                if payload.hasPrefix("book:"),
+                   let draggedUUID = UUID(uuidString: String(payload.dropFirst(5))) {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        onReorderBook?(draggedUUID, book.id)
+                    }
+                    return true
+                }
+                if payload.hasPrefix("decor:"),
+                   let decorUUID = UUID(uuidString: String(payload.dropFirst(6))) {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        onDropDecor?(decorUUID, 1)
+                    }
+                    return true
+                }
+                return false
+            }
             .onTapGesture {
                 if isEditing {
                     withAnimation(.spring(response: 0.3)) { onCycleStyle?(book) }
@@ -967,6 +1015,7 @@ public struct BookshelfTierView: View {
             }
             ShelfDecorView(kind: item.kind, scale: scale, plantStage: plantStage)
         }
+        .draggable("decor:\(item.id.uuidString)")
         .gesture(
             DragGesture(minimumDistance: 24)
                 .onEnded { value in

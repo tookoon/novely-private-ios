@@ -250,13 +250,13 @@ public struct Book: Identifiable, Codable, Hashable {
     public var spineWidthPoints: CGFloat {
         let clampedPages = min(max(Double(pageCount), 120), 1100)
         let normalized = (clampedPages - 120) / (1100 - 120)
-        return CGFloat(24.0 + normalized * 24.0)
+        return CGFloat(20.0 + normalized * 18.0)
     }
 
     public var spineHeightPoints: CGFloat {
         let clampedCm = min(max(heightCm, 17.0), 26.0)
         let normalized = (clampedCm - 17.0) / (26.0 - 17.0)
-        return CGFloat(104.0 + normalized * 34.0)
+        return CGFloat(92.0 + normalized * 28.0)
     }
 }
 

@@ -356,25 +356,43 @@ struct ReadingRoomView: View {
                     .font(.system(size: 15, weight: .semibold, design: .serif))
                     .foregroundStyle(NovelyTheme.creamText)
 
-                HStack(spacing: 8) {
-                    ForEach(AmbientSoundMode.allCases) { sound in
-                        let active = audioEngine.mode == sound
-                        Button {
-                            audioEngine.select(sound)
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: sound.iconName)
-                                    .font(.system(size: 12))
-                                Text(sound.rawValue)
-                                    .font(.system(size: 12, weight: active ? .semibold : .regular))
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(AmbientSoundMode.allCases) { sound in
+                            let active = audioEngine.mode == sound
+                            Button {
+                                audioEngine.select(sound)
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: sound.iconName)
+                                        .font(.system(size: 12))
+                                    Text(sound.rawValue)
+                                        .font(.system(size: 12.5, weight: active ? .semibold : .regular))
+                                }
+                                .foregroundStyle(active ? .black : NovelyTheme.creamText)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(active ? NovelyTheme.warmGold : Color.white.opacity(0.08), in: Capsule())
                             }
-                            .foregroundStyle(active ? .black : NovelyTheme.creamText)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(active ? NovelyTheme.warmGold : Color.white.opacity(0.08), in: Capsule())
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("ambientSound_\(sound.rawValue)")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("ambientSound_\(sound.rawValue)")
+                    }
+                }
+
+                if audioEngine.mode != .off {
+                    HStack(spacing: 10) {
+                        Image(systemName: "speaker.wave.1.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(NovelyTheme.warmMutedText)
+                        Slider(value: Binding(
+                            get: { Double(audioEngine.volume) },
+                            set: { audioEngine.volume = Float($0) }
+                        ), in: 0.1...1.0)
+                        .tint(NovelyTheme.warmGold)
+                        Image(systemName: "speaker.wave.3.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(NovelyTheme.warmMutedText)
                     }
                 }
                 Spacer()
@@ -439,7 +457,7 @@ struct ReadingRoomView: View {
     }
 }
 
-// MARK: - Animated Cozy Particles Overlay
+// MARK: - Window- & Fireplace-Clipped Cozy Particles Overlay (Never leaks inside room!)
 
 private struct AmbientParticlesOverlay: View {
     let theme: ReadingRoomTheme
@@ -448,30 +466,80 @@ private struct AmbientParticlesOverlay: View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
             Canvas { context, size in
-                let count = theme == .rainyLibrary ? 40 : 24
-                for i in 0..<count {
-                    let seed = Double(i) * 1.6180339
-                    switch theme {
-                    case .catWinter:
-                        let x = ((seed * 137.5).truncatingRemainder(dividingBy: 1.0) * size.width) + sin(t * 0.8 + seed) * 14
-                        let speed = 18.0 + (seed.truncatingRemainder(dividingBy: 1.0)) * 20.0
-                        let y = (t * speed + seed * 90).truncatingRemainder(dividingBy: size.height)
-                        let r = 1.4 + (seed.truncatingRemainder(dividingBy: 1.8))
-                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(.white.opacity(0.55)))
-                    case .rainyLibrary:
-                        let x = (seed * 193.7).truncatingRemainder(dividingBy: 1.0) * size.width
-                        let speed = 210.0 + (seed.truncatingRemainder(dividingBy: 1.0)) * 120.0
-                        let y = (t * speed + seed * 120).truncatingRemainder(dividingBy: size.height)
+                switch theme {
+                case .catWinter:
+                    // Strictly clipped to the right-side snowy winter window panes
+                    let winRect = CGRect(
+                        x: size.width * 0.66,
+                        y: size.height * 0.29,
+                        width: size.width * 0.31,
+                        height: size.height * 0.44
+                    )
+                    context.clip(to: Path(roundedRect: winRect, cornerRadius: 6))
+                    for i in 0..<26 {
+                        let seed = Double(i) * 1.6180339
+                        let x = winRect.minX + ((seed * 137.5).truncatingRemainder(dividingBy: 1.0) * winRect.width) + sin(t * 0.9 + seed) * 7
+                        let speed = 16.0 + (seed.truncatingRemainder(dividingBy: 1.0)) * 18.0
+                        let y = winRect.minY + (t * speed + seed * 60).truncatingRemainder(dividingBy: winRect.height)
+                        let r = 1.2 + (seed.truncatingRemainder(dividingBy: 1.6))
+                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(.white.opacity(0.75)))
+                    }
+
+                case .rainyLibrary:
+                    // Strictly clipped inside the left arched library window (zero rain inside room!)
+                    let winRect = CGRect(
+                        x: size.width * 0.04,
+                        y: size.height * 0.35,
+                        width: size.width * 0.41,
+                        height: size.height * 0.43
+                    )
+                    let archPath = Path(
+                        roundedRect: winRect,
+                        cornerRadii: RectangleCornerRadii(
+                            topLeading: winRect.width * 0.48,
+                            bottomLeading: 4,
+                            bottomTrailing: 4,
+                            topTrailing: winRect.width * 0.48
+                        )
+                    )
+                    context.clip(to: archPath)
+                    for i in 0..<42 {
+                        let seed = Double(i) * 1.6180339
+                        let x = winRect.minX + (seed * 193.7).truncatingRemainder(dividingBy: 1.0) * winRect.width
+                        let speed = 220.0 + (seed.truncatingRemainder(dividingBy: 1.0)) * 120.0
+                        let y = winRect.minY + (t * speed + seed * 90).truncatingRemainder(dividingBy: winRect.height)
                         var path = Path()
                         path.move(to: CGPoint(x: x, y: y))
-                        path.addLine(to: CGPoint(x: x - 2, y: y + 14))
-                        context.stroke(path, with: .color(Color(hex: "#B8D4E8").opacity(0.28)), lineWidth: 1)
-                    case .fireplaceCabin, .dogShelf:
-                        let x = size.width * 0.5 + sin(t * 0.7 + seed * 5) * (size.width * 0.42)
-                        let speed = 18.0 + (seed.truncatingRemainder(dividingBy: 1.0)) * 16.0
-                        let y = size.height - ((t * speed + seed * 80).truncatingRemainder(dividingBy: size.height * 0.7))
-                        let r = 1.2 + (seed.truncatingRemainder(dividingBy: 1.5))
-                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(Color(hex: "#FFD17A").opacity(0.35)))
+                        path.addLine(to: CGPoint(x: x - 1.5, y: y + 13))
+                        context.stroke(path, with: .color(Color(hex: "#C8E0F4").opacity(0.45)), lineWidth: 1.1)
+                    }
+
+                case .fireplaceCabin:
+                    // Strictly clipped inside the stone fireplace opening on lower right
+                    let hearthRect = CGRect(
+                        x: size.width * 0.67,
+                        y: size.height * 0.56,
+                        width: size.width * 0.32,
+                        height: size.height * 0.25
+                    )
+                    context.clip(to: Path(roundedRect: hearthRect, cornerRadius: 12))
+                    for i in 0..<18 {
+                        let seed = Double(i) * 1.6180339
+                        let x = hearthRect.midX + sin(t * 1.4 + seed * 5) * (hearthRect.width * 0.36)
+                        let speed = 24.0 + (seed.truncatingRemainder(dividingBy: 1.0)) * 20.0
+                        let y = hearthRect.maxY - ((t * speed + seed * 50).truncatingRemainder(dividingBy: hearthRect.height))
+                        let r = 1.2 + (seed.truncatingRemainder(dividingBy: 1.4))
+                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(Color(hex: "#FFD17A").opacity(0.65)))
+                    }
+
+                case .dogShelf:
+                    // Gentle subtle firefly/fairy-light twinkle along the shelf area only
+                    for i in 0..<12 {
+                        let seed = Double(i) * 1.6180339
+                        let x = size.width * 0.14 + (seed * 137.5).truncatingRemainder(dividingBy: 1.0) * (size.width * 0.72)
+                        let y = size.height * 0.34 + (seed * 93.1).truncatingRemainder(dividingBy: 1.0) * (size.height * 0.30)
+                        let pulse = 0.20 + 0.35 * (0.5 + 0.5 * sin(t * 2.1 + seed * 4.0))
+                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: 3.5, height: 3.5)), with: .color(Color(hex: "#FFE49E").opacity(pulse)))
                     }
                 }
             }

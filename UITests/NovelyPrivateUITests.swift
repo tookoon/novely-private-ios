@@ -198,12 +198,14 @@ final class NovelyPrivateUITests: XCTestCase {
             if rainBtn.waitForExistence(timeout: 3) {
                 rainBtn.tap()
                 sleep(2)
+                attachScreenshot(name: "06b_ReadingRoom_Rain")
             }
 
             let kaminBtn = app.buttons["roomTheme_Kamin"]
             if kaminBtn.waitForExistence(timeout: 3) {
                 kaminBtn.tap()
                 sleep(2)
+                attachScreenshot(name: "06c_ReadingRoom_Fireplace")
             }
 
             let pickerBtn = app.buttons["roomPickerButton"]
