@@ -56,7 +56,7 @@ jobs:
           zip -r -q ../NovelyPrivate.ipa Payload
           ls -lh ../NovelyPrivate.ipa
 
-      - name: Run iOS 26 Simulator UI Tests & Capture Screenshots
+      - name: Run iOS 26 Simulator UI Tests, Capture Screenshots & Record Demo Videos
         run: |
           set -o pipefail
           SIM_ID=$(xcrun simctl list devices available -j | python3 -c "
@@ -81,25 +81,52 @@ jobs:
           xcrun simctl boot "$SIM_ID" || true
           xcrun simctl status_bar "$SIM_ID" override --time "09:41" --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 || true
 
-          mkdir -p build/screenshots
-          xcodebuild test \
+          xcodebuild build-for-testing \
             -project NovelyPrivate.xcodeproj \
             -scheme NovelyPrivate \
             -destination "platform=iOS Simulator,id=$SIM_ID" \
-            -resultBundlePath build/TestResults.xcresult \
+            -derivedDataPath build/sim \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=YES \
-            | tail -n 150
+            | tail -n 80
 
-      - name: Extract Screenshots from xcresult
-        if: always()
-        run: |
-          mkdir -p build/screenshots
-          if [ -d build/TestResults.xcresult ]; then
-            xcrun xcresulttool export attachments --path build/TestResults.xcresult --output-path build/screenshots || true
-            ls -la build/screenshots
-          fi
+          mkdir -p build/videos build/screenshots
+
+          record_clip() {
+            local TEST_NAME="$1"
+            local OUT_MP4="$2"
+            local RESULT_BUNDLE="build/TestResults_${TEST_NAME}.xcresult"
+            echo "=== Recording $OUT_MP4 ($TEST_NAME) ==="
+            xcrun simctl io "$SIM_ID" recordVideo --codec=h264 --force "build/videos/$OUT_MP4" &
+            local REC_PID=$!
+            sleep 1
+            local TEST_EXIT=0
+            xcodebuild test-without-building \
+              -project NovelyPrivate.xcodeproj \
+              -scheme NovelyPrivate \
+              -destination "platform=iOS Simulator,id=$SIM_ID" \
+              -derivedDataPath build/sim \
+              -resultBundlePath "$RESULT_BUNDLE" \
+              -only-testing:"NovelyPrivateUITests/NovelyPrivateUITests/$TEST_NAME" \
+              CODE_SIGN_IDENTITY="-" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=YES \
+              | tail -n 80 || TEST_EXIT=$?
+            kill -INT "$REC_PID" || true
+            wait "$REC_PID" || true
+            sleep 2
+            if [ -d "$RESULT_BUNDLE" ]; then
+              xcrun xcresulttool export attachments --path "$RESULT_BUNDLE" --output-path "build/screenshots/${TEST_NAME}" || true
+            fi
+            return $TEST_EXIT
+          }
+
+          record_clip "test01_BookshelfAnd3DBookDemo" "01_Regal_Deko_3DBuch.mp4"
+          record_clip "test02_LiveSearchAndAddBookDemo" "02_Buch_Suchen_Hinzufuegen.mp4"
+          record_clip "test03_LesenLesezeitAndStatsDemo" "03_Lesen_Lesezimmer_Statistik.mp4"
+
+          ls -lh build/videos/
 
       - name: Upload Unsigned IPA
         if: always()
@@ -107,6 +134,14 @@ jobs:
         with:
           name: NovelyPrivate-IPA
           path: build/NovelyPrivate.ipa
+          if-no-files-found: warn
+
+      - name: Upload Demo Videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-demo-videos
+          path: build/videos
           if-no-files-found: warn
 
       - name: Upload Simulator Screenshots

@@ -908,6 +908,10 @@ public struct BookshelfTierView: View {
                     BookSpineView(book: book, scale: scale)
                 }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(book.title)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityIdentifier("bookItem_\(book.title)")
             .onTapGesture {
                 if isEditing {
                     withAnimation(.spring(response: 0.3)) { onCycleStyle?(book) }

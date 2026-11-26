@@ -155,6 +155,7 @@ struct AddBookSheet: View {
                             .padding(12)
                             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
                             .onSubmit { performSearch() }
+                            .accessibilityIdentifier("bookSearchField")
 
                         Button {
                             performSearch()
@@ -165,6 +166,7 @@ struct AddBookSheet: View {
                                 .padding(12)
                                 .novelyGlassCard(cornerRadius: 14)
                         }
+                        .accessibilityIdentifier("bookSearchSubmitButton")
                     }
 
                     // Target Shelf Selector
@@ -234,6 +236,7 @@ struct AddBookSheet: View {
                             .padding(.vertical, 8)
                             .background(NovelyTheme.creamText, in: Capsule())
                             .disabled(isAddingBook)
+                            .accessibilityIdentifier("addOnlineBookButton")
                         }
                         .padding(12)
                         .novelyGlassCard(cornerRadius: 16)

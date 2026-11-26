@@ -254,6 +254,8 @@ struct BookDetailSheet: View {
                 )
             }
             .frame(height: 215)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("book3DStage")
 
             Label("Ziehen zum 3D-Drehen\(book.isSpecialEdition ? " · Farbschnitt ✨" : "")", systemImage: "rotate.3d")
                 .font(.system(size: 11, weight: .medium))
