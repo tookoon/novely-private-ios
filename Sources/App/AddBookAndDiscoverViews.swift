@@ -1,18 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-// MARK: - Online Book Search Result (Open Library API)
-
-struct OnlineBookResult: Identifiable {
-    let id = UUID()
-    let title: String
-    let author: String
-    let isbn: String
-    let pageCount: Int
-    let publisher: String
-}
-
-// MARK: - Add Book Sheet (Search, ISBN Scanner, Manual)
+// MARK: - Add Book Sheet (Magic Scan Flow: Real Cover + Klappentext + "Rücken scannen?" prompt!)
 
 struct AddBookSheet: View {
     @EnvironmentObject private var store: LibraryStore
@@ -22,8 +11,11 @@ struct AddBookSheet: View {
 
     @State private var searchQuery = ""
     @State private var isSearching = false
+    @State private var isAddingBook = false
     @State private var searchResults: [OnlineBookResult] = []
     @State private var showingISBNScanner = false
+    @State private var pendingSpineBook: Book?
+    @State private var showingSpineScanner = false
 
     // Manual form
     @State private var title = ""
@@ -44,161 +36,12 @@ struct AddBookSheet: View {
         NavigationStack {
             ZStack {
                 NovelyTheme.espressoBg.ignoresSafeArea()
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Online Search + Barcode Scan
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Buch suchen oder ISBN scannen")
-                                .font(.system(size: 16, weight: .semibold, design: .serif))
-                                .foregroundStyle(NovelyTheme.creamText)
 
-                            HStack(spacing: 8) {
-                                TextField("Titel, Autor oder ISBN...", text: $searchQuery)
-                                    .textFieldStyle(.plain)
-                                    .padding(12)
-                                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
-                                    .onSubmit { performSearch() }
-
-                                Button {
-                                    performSearch()
-                                } label: {
-                                    Image(systemName: "magnifyingglass")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundStyle(.black)
-                                        .padding(12)
-                                        .background(NovelyTheme.creamText, in: RoundedRectangle(cornerRadius: 14))
-                                }
-
-                                Button {
-                                    showingISBNScanner = true
-                                } label: {
-                                    Image(systemName: "barcode.viewfinder")
-                                        .font(.system(size: 18))
-                                        .foregroundStyle(NovelyTheme.warmGold)
-                                        .padding(11)
-                                        .novelyGlassCard(cornerRadius: 14)
-                                }
-                            }
-
-                            if isSearching {
-                                HStack {
-                                    ProgressView().tint(NovelyTheme.warmGold)
-                                    Text("Suche im Katalog...")
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(NovelyTheme.warmMutedText)
-                                }
-                                .padding(.top, 4)
-                            }
-
-                            ForEach(searchResults) { item in
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(item.title)
-                                            .font(.system(size: 15, weight: .semibold, design: .serif))
-                                            .foregroundStyle(NovelyTheme.creamText)
-                                        Text("\(item.author) · \(item.pageCount) S.")
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(NovelyTheme.warmMutedText)
-                                    }
-                                    Spacer()
-                                    Button("Hinzufügen") {
-                                        let book = Book(
-                                            title: item.title,
-                                            author: item.author,
-                                            isbn: item.isbn,
-                                            publisher: item.publisher,
-                                            pageCount: item.pageCount,
-                                            currentPage: shelf == .read ? item.pageCount : 0,
-                                            shelf: shelf,
-                                            spineColorHex: colorChoices.randomElement() ?? "#263B4D",
-                                            purchasePrice: 18.0
-                                        )
-                                        store.addBook(book)
-                                        dismiss()
-                                    }
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(.black)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 7)
-                                    .background(NovelyTheme.creamText, in: Capsule())
-                                }
-                                .padding(12)
-                                .novelyGlassCard(cornerRadius: 14)
-                            }
-                        }
-
-                        Divider().background(Color.white.opacity(0.12))
-
-                        // Manual Creation
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Oder manuell anlegen")
-                                .font(.system(size: 16, weight: .semibold, design: .serif))
-                                .foregroundStyle(NovelyTheme.creamText)
-
-                            TextField("Buchtitel", text: $title)
-                                .padding(12)
-                                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-                            TextField("Autor:in", text: $author)
-                                .padding(12)
-                                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-
-                            HStack(spacing: 12) {
-                                TextField("Seiten", text: $pagesText)
-                                    .keyboardType(.numberPad)
-                                    .padding(12)
-                                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-                                TextField("Preis (€)", text: $priceText)
-                                    .keyboardType(.decimalPad)
-                                    .padding(12)
-                                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-                            }
-
-                            Picker("Regal", selection: $shelf) {
-                                ForEach(ShelfCategory.allCases) { cat in
-                                    Text(cat.rawValue).tag(cat)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-
-                            HStack(spacing: 10) {
-                                ForEach(colorChoices, id: \.self) { hex in
-                                    Circle()
-                                        .fill(Color(hex: hex))
-                                        .frame(width: 28, height: 28)
-                                        .overlay(
-                                            Circle().strokeBorder(selectedColorHex == hex ? NovelyTheme.warmGold : .clear, lineWidth: 2)
-                                        )
-                                        .onTapGesture { selectedColorHex = hex }
-                                }
-                            }
-
-                            Button {
-                                guard !title.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-                                let pages = Int(pagesText) ?? 320
-                                let price = Double(priceText.replacingOccurrences(of: ",", with: ".")) ?? 18.0
-                                let newBook = Book(
-                                    title: title,
-                                    author: author.isEmpty ? "Unbekannt" : author,
-                                    pageCount: max(20, pages),
-                                    currentPage: shelf == .read ? max(20, pages) : 0,
-                                    shelf: shelf,
-                                    spineColorHex: selectedColorHex,
-                                    purchasePrice: price
-                                )
-                                store.addBook(newBook)
-                                dismiss()
-                            } label: {
-                                Text("Ins Regal stellen")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(.black)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 14)
-                                    .background(NovelyTheme.creamText, in: Capsule())
-                            }
-                            .padding(.top, 6)
-                        }
-                    }
-                    .padding(18)
+                if let addedBook = pendingSpineBook {
+                    // Exact Reel 2 Post-Add Prompt: "Steht im Regal -> Rücken scannen?"
+                    postAddSpinePrompt(for: addedBook)
+                } else {
+                    mainAddForm
                 }
             }
             .navigationTitle("Buch hinzufügen")
@@ -214,6 +57,254 @@ struct AddBookSheet: View {
                     performSearch()
                 }
             }
+            .sheet(isPresented: $showingSpineScanner) {
+                SpineScannerView(book: pendingSpineBook) { imageData in
+                    if var book = pendingSpineBook,
+                       let filename = LibraryStorage.saveImageData(imageData, prefix: "spine") {
+                        book.customSpineFilename = filename
+                        book.displayStyle = .spine
+                        store.updateBook(book)
+                    }
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    // MARK: - Post-Add "Rücken scannen?" Prompt (Exact Reel 2 Flow!)
+
+    private func postAddSpinePrompt(for book: Book) -> some View {
+        VStack(spacing: 20) {
+            Spacer()
+            BookCoverForwardView(book: book, scale: 1.1)
+
+            VStack(spacing: 6) {
+                Text("Steht im Regal ✨")
+                    .font(.system(size: 24, weight: .bold, design: .serif))
+                    .foregroundStyle(NovelyTheme.creamText)
+                Text(book.title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(NovelyTheme.warmGold)
+                Text("Fotografier jetzt den Buchrücken, dann steht dein echtes physisches Buch im Regal.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(NovelyTheme.warmMutedText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 26)
+            }
+
+            Spacer()
+
+            VStack(spacing: 12) {
+                Button {
+                    showingSpineScanner = true
+                } label: {
+                    Label("Rücken scannen", systemImage: "camera.viewfinder")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background(NovelyTheme.creamText, in: Capsule())
+                }
+
+                Button("Fertig (mit echtem Cover lassen)") {
+                    dismiss()
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(NovelyTheme.warmMutedText)
+                .padding(.vertical, 8)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 28)
+        }
+    }
+
+    // MARK: - Main Search + Barcode + Manual Form
+
+    private var mainAddForm: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                // Big Barcode Scan CTA + Search Bar
+                VStack(alignment: .leading, spacing: 10) {
+                    Button {
+                        showingISBNScanner = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "barcode.viewfinder")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.black)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("ISBN-Barcode scannen")
+                                    .font(.system(size: 15.5, weight: .bold))
+                                    .foregroundStyle(.black)
+                                Text("Lädt echtes Cover, Klappentext & Seitenzahl")
+                                    .font(.system(size: 11.5))
+                                    .foregroundStyle(.black.opacity(0.7))
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(.black.opacity(0.6))
+                        }
+                        .padding(14)
+                        .background(NovelyTheme.creamText, in: RoundedRectangle(cornerRadius: 18))
+                    }
+                    .buttonStyle(.plain)
+
+                    HStack(spacing: 8) {
+                        TextField("Oder Titel / Autor / ISBN suchen...", text: $searchQuery)
+                            .textFieldStyle(.plain)
+                            .padding(12)
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+                            .onSubmit { performSearch() }
+
+                        Button {
+                            performSearch()
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(NovelyTheme.creamText)
+                                .padding(12)
+                                .novelyGlassCard(cornerRadius: 14)
+                        }
+                    }
+
+                    // Target Shelf Selector
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach([ShelfCategory.unread, .reading, .read, .wishlist], id: \.self) { cat in
+                                let active = shelf == cat
+                                Button {
+                                    shelf = cat
+                                } label: {
+                                    Text(cat.rawValue)
+                                        .font(.system(size: 12.5, weight: active ? .semibold : .regular))
+                                        .foregroundStyle(active ? .black : NovelyTheme.creamText)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 7)
+                                        .background(active ? NovelyTheme.warmGold : Color.white.opacity(0.08), in: Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    if isSearching || isAddingBook {
+                        HStack(spacing: 10) {
+                            ProgressView().tint(NovelyTheme.warmGold)
+                            Text(isAddingBook ? "Lade echtes Buchcover & stelle ins Regal..." : "Suche echte Buchdaten & Cover...")
+                                .font(.system(size: 13))
+                                .foregroundStyle(NovelyTheme.warmMutedText)
+                        }
+                        .padding(.top, 4)
+                    }
+
+                    // Search Results with REAL Book Cover Previews!
+                    ForEach(searchResults) { item in
+                        HStack(spacing: 12) {
+                            if let coverStr = item.coverURLString, let url = URL(string: coverStr) {
+                                AsyncImage(url: url) { phase in
+                                    if case .success(let image) = phase {
+                                        image.resizable().scaledToFill()
+                                    } else {
+                                        Color.white.opacity(0.08)
+                                    }
+                                }
+                                .frame(width: 44, height: 64)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(item.title)
+                                    .font(.system(size: 15, weight: .semibold, design: .serif))
+                                    .foregroundStyle(NovelyTheme.creamText)
+                                    .lineLimit(2)
+                                Text(item.author)
+                                    .font(.system(size: 12.5))
+                                    .foregroundStyle(NovelyTheme.warmMutedText)
+                                Text("\(item.publisher.isEmpty ? "Buch" : item.publisher) · \(item.pageCount) Seiten")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(NovelyTheme.warmGold)
+                            }
+                            Spacer()
+                            Button("Ins Regal") {
+                                addOnlineResult(item)
+                            }
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(NovelyTheme.creamText, in: Capsule())
+                            .disabled(isAddingBook)
+                        }
+                        .padding(12)
+                        .novelyGlassCard(cornerRadius: 16)
+                    }
+                }
+
+                Divider().background(Color.white.opacity(0.12))
+
+                // Manual Creation
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Oder manuell anlegen")
+                        .font(.system(size: 16, weight: .semibold, design: .serif))
+                        .foregroundStyle(NovelyTheme.creamText)
+
+                    TextField("Buchtitel", text: $title)
+                        .padding(12)
+                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                    TextField("Autor:in", text: $author)
+                        .padding(12)
+                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+
+                    HStack(spacing: 12) {
+                        TextField("Seiten", text: $pagesText)
+                            .keyboardType(.numberPad)
+                            .padding(12)
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                        TextField("Preis (€)", text: $priceText)
+                            .keyboardType(.decimalPad)
+                            .padding(12)
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    HStack(spacing: 10) {
+                        ForEach(colorChoices, id: \.self) { hex in
+                            Circle()
+                                .fill(Color(hex: hex))
+                                .frame(width: 28, height: 28)
+                                .overlay(
+                                    Circle().strokeBorder(selectedColorHex == hex ? NovelyTheme.warmGold : .clear, lineWidth: 2)
+                                )
+                                .onTapGesture { selectedColorHex = hex }
+                        }
+                    }
+
+                    Button {
+                        guard !title.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                        let pages = Int(pagesText) ?? 320
+                        let price = Double(priceText.replacingOccurrences(of: ",", with: ".")) ?? 18.0
+                        let newBook = Book(
+                            title: title,
+                            author: author.isEmpty ? "Unbekannt" : author,
+                            pageCount: max(20, pages),
+                            currentPage: shelf == .read ? max(20, pages) : 0,
+                            shelf: shelf,
+                            spineColorHex: selectedColorHex,
+                            purchasePrice: price
+                        )
+                        store.addBook(newBook)
+                        pendingSpineBook = newBook
+                    } label: {
+                        Text("Ins Regal stellen")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(NovelyTheme.creamText, in: Capsule())
+                    }
+                    .padding(.top, 4)
+                }
+            }
+            .padding(18)
         }
     }
 
@@ -225,30 +316,38 @@ struct AddBookSheet: View {
 
         Task {
             defer { isSearching = false }
-            guard let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-                  let url = URL(string: "https://openlibrary.org/search.json?q=\(encoded)&limit=6") else { return }
-            do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let docs = json["docs"] as? [[String: Any]] {
-                    self.searchResults = docs.compactMap { doc in
-                        guard let t = doc["title"] as? String else { return nil }
-                        let authors = doc["author_name"] as? [String]
-                        let isbns = doc["isbn"] as? [String]
-                        let publishers = doc["publisher"] as? [String]
-                        let pages = doc["number_of_pages_median"] as? Int ?? 340
-                        return OnlineBookResult(
-                            title: t,
-                            author: authors?.first ?? "Unbekannt",
-                            isbn: isbns?.first ?? "",
-                            pageCount: pages,
-                            publisher: publishers?.first ?? ""
-                        )
-                    }
-                }
-            } catch {
-                // Offline fallback
-            }
+            self.searchResults = await BookMetadataService.searchBooks(query: trimmed)
+        }
+    }
+
+    private func addOnlineResult(_ item: OnlineBookResult) {
+        isAddingBook = true
+        Task {
+            defer { isAddingBook = false }
+            let coverDownload = await BookMetadataService.downloadAndStoreCover(
+                urlString: item.coverURLString,
+                isbn: item.isbn
+            )
+
+            let book = Book(
+                title: item.title,
+                author: item.author,
+                isbn: item.isbn,
+                publisher: item.publisher,
+                publishedYear: item.publishedYear,
+                bindingType: item.bindingType,
+                bookDescription: item.bookDescription,
+                pageCount: item.pageCount,
+                currentPage: shelf == .read ? item.pageCount : 0,
+                shelf: shelf,
+                displayStyle: coverDownload != nil ? .coverForward : .spine,
+                spineColorHex: coverDownload?.dominantHex ?? (colorChoices.randomElement() ?? "#263B4D"),
+                coverURLString: item.coverURLString,
+                customCoverFilename: coverDownload?.filename,
+                purchasePrice: 18.0
+            )
+            store.addBook(book)
+            pendingSpineBook = book
         }
     }
 }
@@ -261,6 +360,7 @@ struct DiscoverAndSettingsView: View {
     @State private var showingJSONImporter = false
     @State private var statusBanner: String?
     @State private var showingAddBook = false
+    @State private var showingClearConfirm = false
 
     var body: some View {
         NavigationStack {
@@ -268,7 +368,6 @@ struct DiscoverAndSettingsView: View {
                 NovelyTheme.espressoBg.ignoresSafeArea()
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
-                        // Privacy Badge (100% Free & Local!)
                         HStack(spacing: 14) {
                             Image(systemName: "lock.shield.fill")
                                 .font(.system(size: 28))
@@ -277,7 +376,7 @@ struct DiscoverAndSettingsView: View {
                                 Text("100 % Privat & Kostenlos")
                                     .font(.system(size: 16, weight: .bold, design: .serif))
                                     .foregroundStyle(NovelyTheme.creamText)
-                                Text("Kein Abo, keine Paywall, kein Tracking. Alle deine Bücher & Zitate bleiben lokal auf deinem iPhone.")
+                                Text("Kein Abo, keine Paywall, kein Account nötig. Alle Bücher, Cover & Zitate bleiben lokal auf deinem iPhone.")
                                     .font(.system(size: 12))
                                     .foregroundStyle(NovelyTheme.warmMutedText)
                             }
@@ -294,7 +393,7 @@ struct DiscoverAndSettingsView: View {
                                 .novelyGlassCard(cornerRadius: 14)
                         }
 
-                        // Personalization
+                        // Profile & Goals
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Dein Profil & Leseziele")
                                 .font(.system(size: 18, weight: .semibold, design: .serif))
@@ -369,16 +468,20 @@ struct DiscoverAndSettingsView: View {
                         .padding(16)
                         .novelyGlassCard(cornerRadius: 20)
 
-                        // Quick Actions
+                        // Quick Actions & Clean Slate
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Schnellaktionen")
+                            Text("Regal verwalten")
                                 .font(.system(size: 18, weight: .semibold, design: .serif))
                                 .foregroundStyle(NovelyTheme.creamText)
 
                             Button {
-                                showingAddBook = true
+                                Task {
+                                    statusBanner = "Lade fehlende echte Buchcover..."
+                                    await store.hydrateRealCoversIfNeeded()
+                                    statusBanner = "Alle verfügbaren echten Cover geladen ✓"
+                                }
                             } label: {
-                                Label("Buch per Online-Suche oder Barcode hinzufügen", systemImage: "plus.circle.fill")
+                                Label("Fehlende echte Buchcover nachladen", systemImage: "photo.stack")
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(NovelyTheme.creamText)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -388,10 +491,23 @@ struct DiscoverAndSettingsView: View {
                             .buttonStyle(.plain)
 
                             Button {
-                                store.loadDemoLibrary()
-                                statusBanner = "Demo-Bibliothek mit 18 Büchern geladen ✓"
+                                showingClearConfirm = true
                             } label: {
-                                Label("Demo-Regal zurücksetzen", systemImage: "sparkles")
+                                Label("Regal komplett leeren (für eigene Bücher)", systemImage: "trash")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(NovelyTheme.terracotta)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(12)
+                                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
+                            }
+                            .buttonStyle(.plain)
+
+                            Button {
+                                store.loadDemoLibrary(markOnboarded: true)
+                                statusBanner = "Demo-Regal geladen ✓"
+                                Task { await store.hydrateRealCoversIfNeeded() }
+                            } label: {
+                                Label("Demo-Regal laden", systemImage: "sparkles")
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(NovelyTheme.warmMutedText)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -408,8 +524,14 @@ struct DiscoverAndSettingsView: View {
                     .padding(18)
                 }
             }
-            .navigationTitle("Entdecken & Mehr")
+            .navigationTitle("Mehr")
             .navigationBarTitleDisplayMode(.inline)
+            .confirmationDialog("Alle Bücher im Regal entfernen?", isPresented: $showingClearConfirm, titleVisibility: .visible) {
+                Button("Alle entfernen", role: .destructive) {
+                    store.clearAllBooks()
+                    statusBanner = "Regal geleert – bereit für deine eigenen Bücher!"
+                }
+            }
             .fileImporter(isPresented: $showingCSVImporter, allowedContentTypes: [.commaSeparatedText, .plainText]) { result in
                 if case .success(let url) = result,
                    url.startAccessingSecurityScopedResource() {

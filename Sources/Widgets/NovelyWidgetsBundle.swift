@@ -30,16 +30,19 @@ struct NovelyTimelineProvider: TimelineProvider {
             books: [
                 Book(title: "Iron Flame", author: "Rebecca Yarros", pageCount: 960, currentPage: 960, heightCm: 23.5, shelf: .read, spineColorHex: "#1E1A18", spineAccentHex: "#E2A648"),
                 Book(title: "Das Lied der Krähen", author: "Leigh Bardugo", pageCount: 592, currentPage: 592, heightCm: 21.8, shelf: .read, spineColorHex: "#8C2622", spineAccentHex: "#191514"),
-                Book(title: "Animal Farm", author: "George Orwell", pageCount: 144, currentPage: 144, heightCm: 19.5, shelf: .read, displayStyle: .coverForward, spineColorHex: "#3C4F3D", spineAccentHex: "#E3B873"),
+                Book(title: "Throne of Glass", author: "Sarah J. Maas", pageCount: 512, currentPage: 512, heightCm: 22.0, shelf: .read, displayStyle: .coverForward, spineColorHex: "#142738", spineAccentHex: "#D4AF37"),
                 Book(title: "Yellowface", author: "R. F. Kuang", pageCount: 352, currentPage: 301, heightCm: 21.2, shelf: .reading, spineColorHex: "#E6BC2F", spineAccentHex: "#191716", spineTextColorHex: "#191716")
             ],
-            decor: [ShelfDecorItem(kind: .monstera, rowIndex: 0, isEnabled: true)],
+            decor: [
+                ShelfDecorItem(kind: .sleepingCat, rowIndex: 0, slotIndex: 2, isEnabled: true),
+                ShelfDecorItem(kind: .monstera, rowIndex: 1, slotIndex: 0, isEnabled: true)
+            ],
             settings: ShelfSettings()
         )
     }
 }
 
-// MARK: - 1. Home Screen Bookshelf Widget (Small, Medium, Large)
+// MARK: - 1. Home Screen Bookshelf Widget (Warm Wooden Cabinet + Draped Fairy Lights + Real Covers + Cat!)
 
 struct BookshelfWidgetView: View {
     @Environment(\.widgetFamily) private var family
@@ -53,37 +56,38 @@ struct BookshelfWidgetView: View {
     var body: some View {
         let settings = entry.snapshot.settings
         ZStack(alignment: .bottomLeading) {
-            VStack(spacing: family == .systemLarge ? 10 : 0) {
+            VStack(spacing: family == .systemLarge ? 6 : 0) {
                 if family == .systemLarge {
                     BookshelfTierView(
-                        books: Array(readBooks.prefix(5)),
-                        decorItem: ShelfDecorItem(kind: .monstera, rowIndex: 0, isEnabled: true),
+                        books: Array(readBooks.prefix(4)),
+                        decorItems: [ShelfDecorItem(kind: .sleepingCat, rowIndex: 0, slotIndex: 2, isEnabled: true)],
                         woodFinish: settings.woodFinish,
                         fairyLightsEnabled: settings.fairyLightsEnabled,
-                        scale: 0.72
+                        scale: 0.68
                     )
                     BookshelfTierView(
-                        books: Array(readBooks.dropFirst(5).prefix(6)),
-                        decorItem: ShelfDecorItem(kind: .candle, rowIndex: 1, isEnabled: true),
+                        books: Array(readBooks.dropFirst(4).prefix(5)),
+                        decorItems: [ShelfDecorItem(kind: .monstera, rowIndex: 1, slotIndex: 0, isEnabled: true)],
                         woodFinish: settings.woodFinish,
                         fairyLightsEnabled: settings.fairyLightsEnabled,
-                        scale: 0.72
+                        scale: 0.68
                     )
                 } else {
                     BookshelfTierView(
-                        books: Array(readBooks.prefix(family == .systemSmall ? 3 : 6)),
-                        decorItem: family == .systemMedium ? ShelfDecorItem(kind: .monstera, rowIndex: 0, isEnabled: true) : nil,
+                        books: Array(readBooks.prefix(family == .systemSmall ? 2 : 5)),
+                        decorItems: family == .systemMedium ? [ShelfDecorItem(kind: .sleepingCat, rowIndex: 0, slotIndex: 2, isEnabled: true)] : [],
                         woodFinish: settings.woodFinish,
                         fairyLightsEnabled: settings.fairyLightsEnabled,
-                        scale: family == .systemSmall ? 0.62 : 0.68
+                        scale: family == .systemSmall ? 0.58 : 0.65
                     )
                 }
             }
-            .padding(.bottom, 16)
+            .padding(.bottom, 14)
 
             Text("Gelesen · \(readBooks.count) Bücher")
                 .font(.system(size: 11, weight: .semibold, design: .serif))
-                .foregroundStyle(NovelyTheme.creamText.opacity(0.9))
+                .foregroundStyle(NovelyTheme.creamText)
+                .shadow(color: .black.opacity(0.6), radius: 2)
                 .padding(.horizontal, 10)
                 .padding(.bottom, 4)
         }
@@ -106,7 +110,7 @@ struct BookshelfHomeWidget: Widget {
             BookshelfWidgetView(entry: entry)
         }
         .configurationDisplayName("Dein Bücherregal")
-        .description("Zeigt dein echtes Bücherregal mit Buchrücken & Deko direkt auf dem Homescreen.")
+        .description("Zeigt dein warmes Holz-Bücherregal mit echten Covern, Katze & Lichterkette.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -160,7 +164,7 @@ struct CurrentlyReadingWidgetView: View {
             }
         }
         .containerBackground(for: .widget) {
-            Color(hex: "#181310")
+            Color(hex: "#2B1E16")
         }
         .widgetURL(URL(string: "novelyprivate://shelf/Aktuell"))
     }
@@ -178,8 +182,6 @@ struct CurrentlyReadingWidget: Widget {
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
     }
 }
-
-// MARK: - Widget Bundle Entry Point
 
 @main
 struct NovelyWidgetsBundle: WidgetBundle {

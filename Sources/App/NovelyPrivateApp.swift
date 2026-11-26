@@ -17,6 +17,9 @@ struct NovelyPrivateApp: App {
                 .environmentObject(audioEngine)
                 .preferredColorScheme(.dark)
                 .tint(NovelyTheme.terracotta)
+                .task {
+                    await store.hydrateRealCoversIfNeeded()
+                }
                 .onOpenURL { url in
                     handleDeepLink(url)
                 }
@@ -27,6 +30,7 @@ struct NovelyPrivateApp: App {
         guard url.scheme == "novelyprivate" else { return }
         if url.host == "shelf", let shelfRaw = url.pathComponents.last,
            let category = ShelfCategory.allCases.first(where: { $0.rawValue.lowercased() == shelfRaw.lowercased() }) {
+            store.selectedCustomShelfId = nil
             store.selectedShelf = category
         }
     }

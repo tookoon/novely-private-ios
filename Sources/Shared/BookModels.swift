@@ -23,6 +23,20 @@ public enum ShelfCategory: String, Codable, CaseIterable, Identifiable, Hashable
     }
 }
 
+// MARK: - Custom Shelf
+
+public struct CustomShelf: Identifiable, Codable, Hashable {
+    public var id: UUID
+    public var name: String
+    public var iconName: String
+
+    public init(id: UUID = UUID(), name: String, iconName: String = "star.fill") {
+        self.id = id
+        self.name = name
+        self.iconName = iconName
+    }
+}
+
 // MARK: - Book Display Style on Shelf
 
 public enum BookDisplayStyle: String, Codable, CaseIterable, Identifiable {
@@ -52,6 +66,29 @@ public enum SpineTypography: String, Codable, CaseIterable, Identifiable {
     public var id: String { rawValue }
 }
 
+// MARK: - Daily Goal Mode
+
+public enum DailyGoalMode: String, Codable, CaseIterable, Identifiable {
+    case pages = "Seiten"
+    case minutes = "Minuten"
+
+    public var id: String { rawValue }
+}
+
+// MARK: - Growing Plant Gamification ("Zieh eine Pflanze groß")
+
+public struct GrowingPlantState: Codable, Hashable {
+    public var plantName: String
+    public var isAdopted: Bool
+    public var isBannerDismissed: Bool
+
+    public init(plantName: String = "Monstera", isAdopted: Bool = false, isBannerDismissed: Bool = false) {
+        self.plantName = plantName
+        self.isAdopted = isAdopted
+        self.isBannerDismissed = isBannerDismissed
+    }
+}
+
 // MARK: - Book Quote
 
 public struct BookQuote: Identifiable, Codable, Hashable {
@@ -60,19 +97,22 @@ public struct BookQuote: Identifiable, Codable, Hashable {
     public var pageNumber: Int?
     public var dateAdded: Date
     public var note: String?
+    public var isThought: Bool
 
     public init(
         id: UUID = UUID(),
         text: String,
         pageNumber: Int? = nil,
         dateAdded: Date = Date(),
-        note: String? = nil
+        note: String? = nil,
+        isThought: Bool = false
     ) {
         self.id = id
         self.text = text
         self.pageNumber = pageNumber
         self.dateAdded = dateAdded
         self.note = note
+        self.isThought = isThought
     }
 }
 
@@ -84,10 +124,15 @@ public struct Book: Identifiable, Codable, Hashable {
     public var author: String
     public var isbn: String
     public var publisher: String
+    public var publishedYear: String
+    public var bindingType: String
+    public var originalTitle: String
+    public var bookDescription: String
     public var pageCount: Int
     public var currentPage: Int
     public var heightCm: Double
     public var shelf: ShelfCategory
+    public var customShelfIDs: [UUID]
     public var displayStyle: BookDisplayStyle
     public var spineColorHex: String
     public var spineAccentHex: String
@@ -96,7 +141,7 @@ public struct Book: Identifiable, Codable, Hashable {
     public var coverURLString: String?
     public var customSpineFilename: String?
     public var customCoverFilename: String?
-    public var rating: Double // 0.0 ... 5.0 in 0.5 steps
+    public var rating: Double
     public var seriesName: String?
     public var seriesIndex: Int?
     public var seriesTotal: Int?
@@ -119,10 +164,15 @@ public struct Book: Identifiable, Codable, Hashable {
         author: String,
         isbn: String = "",
         publisher: String = "",
+        publishedYear: String = "",
+        bindingType: String = "Gebunden",
+        originalTitle: String = "",
+        bookDescription: String = "",
         pageCount: Int = 320,
         currentPage: Int = 0,
         heightCm: Double = 21.0,
         shelf: ShelfCategory = .unread,
+        customShelfIDs: [UUID] = [],
         displayStyle: BookDisplayStyle = .spine,
         spineColorHex: String = "#2C3E50",
         spineAccentHex: String = "#D4AF37",
@@ -153,10 +203,15 @@ public struct Book: Identifiable, Codable, Hashable {
         self.author = author
         self.isbn = isbn
         self.publisher = publisher
+        self.publishedYear = publishedYear
+        self.bindingType = bindingType
+        self.originalTitle = originalTitle
+        self.bookDescription = bookDescription
         self.pageCount = max(1, pageCount)
         self.currentPage = min(max(0, currentPage), max(1, pageCount))
         self.heightCm = min(max(16.0, heightCm), 28.0)
         self.shelf = shelf
+        self.customShelfIDs = customShelfIDs
         self.displayStyle = displayStyle
         self.spineColorHex = spineColorHex
         self.spineAccentHex = spineAccentHex
@@ -192,18 +247,16 @@ public struct Book: Identifiable, Codable, Hashable {
         Int((progress * 100).rounded())
     }
 
-    /// True physical thickness proportion on shelf (in points)
     public var spineWidthPoints: CGFloat {
         let clampedPages = min(max(Double(pageCount), 120), 1100)
         let normalized = (clampedPages - 120) / (1100 - 120)
-        return CGFloat(24.0 + normalized * 24.0) // 24pt to 48pt
+        return CGFloat(24.0 + normalized * 24.0)
     }
 
-    /// True physical height proportion on shelf (in points)
     public var spineHeightPoints: CGFloat {
         let clampedCm = min(max(heightCm, 17.0), 26.0)
         let normalized = (clampedCm - 17.0) / (26.0 - 17.0)
-        return CGFloat(104.0 + normalized * 34.0) // 104pt to 138pt
+        return CGFloat(104.0 + normalized * 34.0)
     }
 }
 
@@ -223,7 +276,7 @@ public struct ReadingSession: Identifiable, Codable, Hashable {
         date: Date = Date(),
         durationSeconds: Int,
         pagesRead: Int,
-        roomTheme: ReadingRoomTheme = .winter
+        roomTheme: ReadingRoomTheme = .catWinter
     ) {
         self.id = id
         self.bookId = bookId
@@ -237,23 +290,23 @@ public struct ReadingSession: Identifiable, Codable, Hashable {
 // MARK: - Shelf Decor
 
 public enum DecorKind: String, Codable, CaseIterable, Identifiable {
+    case sleepingCat = "Katze"
+    case monstera = "Pflanze"
     case candle = "Kerze"
-    case monstera = "Monstera"
+    case snowman = "Schneemann"
     case snowGlobe = "Schneekugel"
     case coffeeMug = "Lesetasse"
-    case hourglass = "Sanduhr"
-    case pinecones = "Tannenzapfen"
 
     public var id: String { rawValue }
 
     public var symbolName: String {
         switch self {
-        case .candle: return "flame.fill"
+        case .sleepingCat: return "cat.fill"
         case .monstera: return "leaf.fill"
-        case .snowGlobe: return "snowflake"
+        case .candle: return "flame.fill"
+        case .snowman: return "snowflake"
+        case .snowGlobe: return "sparkles"
         case .coffeeMug: return "cup.and.saucer.fill"
-        case .hourglass: return "hourglass"
-        case .pinecones: return "tree.fill"
         }
     }
 }
@@ -262,103 +315,127 @@ public struct ShelfDecorItem: Identifiable, Codable, Hashable {
     public var id: UUID
     public var kind: DecorKind
     public var rowIndex: Int
+    /// 0 = left, 1 = middle, 2 = right (user can drag/shift freely!)
+    public var slotIndex: Int
     public var isEnabled: Bool
 
-    public init(id: UUID = UUID(), kind: DecorKind, rowIndex: Int, isEnabled: Bool = true) {
+    public init(id: UUID = UUID(), kind: DecorKind, rowIndex: Int, slotIndex: Int = 2, isEnabled: Bool = true) {
         self.id = id
         self.kind = kind
         self.rowIndex = rowIndex
+        self.slotIndex = slotIndex
         self.isEnabled = isEnabled
     }
 }
 
-// MARK: - Themes & Reading Rooms
+// MARK: - Warm Bookshelf Wall Themes (No longer pitch black!)
 
 public enum ShelfWallTheme: String, Codable, CaseIterable, Identifiable {
-    case forestVelvet = "Waldgrün"
-    case darkEspresso = "Espresso"
-    case burgundyLibrary = "Bordeaux"
-    case midnightBlue = "Mitternacht"
-    case warmSandstone = "Pergament"
+    case warmOakCabinet = "Holzregal"
+    case cozyCream = "Creme"
+    case warmWalnut = "Walnuss"
+    case sageLibrary = "Salbei"
+    case espressoDark = "Dunkel"
 
     public var id: String { rawValue }
 
     public var topHex: String {
         switch self {
-        case .forestVelvet: return "#1B2620"
-        case .darkEspresso: return "#1A1411"
-        case .burgundyLibrary: return "#291418"
-        case .midnightBlue: return "#131926"
-        case .warmSandstone: return "#332B24"
+        case .warmOakCabinet: return "#5C402C"
+        case .cozyCream: return "#CFC2AE"
+        case .warmWalnut: return "#4E3626"
+        case .sageLibrary: return "#384B40"
+        case .espressoDark: return "#241C17"
         }
     }
 
     public var bottomHex: String {
         switch self {
-        case .forestVelvet: return "#0E1411"
-        case .darkEspresso: return "#0F0B09"
-        case .burgundyLibrary: return "#14090B"
-        case .midnightBlue: return "#0A0D14"
-        case .warmSandstone: return "#1C1713"
+        case .warmOakCabinet: return "#3A2618"
+        case .cozyCream: return "#A89880"
+        case .warmWalnut: return "#2B1C13"
+        case .sageLibrary: return "#222E27"
+        case .espressoDark: return "#14100E"
         }
+    }
+
+    public var usesWoodTextureImage: Bool {
+        self == .warmOakCabinet
+    }
+
+    public var isLightTheme: Bool {
+        self == .cozyCream
     }
 }
 
 public enum WoodFinish: String, Codable, CaseIterable, Identifiable {
-    case walnut = "Walnuss"
     case oak = "Eiche"
+    case walnut = "Walnuss"
+    case honey = "Honigholz"
     case mahogany = "Mahagoni"
-    case ebony = "Ebenholz"
 
     public var id: String { rawValue }
 
     public var topHex: String {
         switch self {
-        case .walnut: return "#6E4B32"
-        case .oak: return "#9E7850"
-        case .mahogany: return "#5C2C24"
-        case .ebony: return "#342E2B"
+        case .oak: return "#B48B5F"
+        case .walnut: return "#7D563A"
+        case .honey: return "#C79A63"
+        case .mahogany: return "#69352B"
         }
     }
 
     public var frontHex: String {
         switch self {
-        case .walnut: return "#4A311F"
-        case .oak: return "#735536"
-        case .mahogany: return "#3B1A15"
-        case .ebony: return "#1F1B19"
+        case .oak: return "#8C6843"
+        case .walnut: return "#593A25"
+        case .honey: return "#9E7342"
+        case .mahogany: return "#47211A"
+        }
+    }
+
+    public var sideHex: String {
+        switch self {
+        case .oak: return "#6E5032"
+        case .walnut: return "#422A1B"
+        case .honey: return "#7D5932"
+        case .mahogany: return "#341611"
         }
     }
 }
 
 public enum ReadingRoomTheme: String, Codable, CaseIterable, Identifiable {
-    case winter = "Winter im Lesezimmer"
-    case rainy = "Regnerische Bibliothek"
-    case fireplace = "Kaminzimmer"
+    case catWinter = "Katze"
+    case dogShelf = "Hund"
+    case rainyLibrary = "Regen"
+    case fireplaceCabin = "Kamin"
 
     public var id: String { rawValue }
 
     public var imageAssetName: String {
         switch self {
-        case .winter: return "ReadingRoomWinter"
-        case .rainy: return "ReadingRoomRainy"
-        case .fireplace: return "ReadingRoomFireplace"
+        case .catWinter: return "ReadingRoomWinter"
+        case .dogShelf: return "ReadingRoomDog"
+        case .rainyLibrary: return "ReadingRoomRainy"
+        case .fireplaceCabin: return "ReadingRoomFireplace"
         }
     }
 
     public var subtitle: String {
         switch self {
-        case .winter: return "Leiser Schneefall & Kerzenschein"
-        case .rainy: return "Regentropfen am Bibliotheksfenster"
-        case .fireplace: return "Prasselndes Kaminfeuer & Wärme"
+        case .catWinter: return "Schlafende Katze & Schneefall"
+        case .dogShelf: return "Schlafender Hund auf dem Regal"
+        case .rainyLibrary: return "Regentropfen am Bibliotheksfenster"
+        case .fireplaceCabin: return "Prasselndes Kaminfeuer & Wärme"
         }
     }
 
     public var ambientIcon: String {
         switch self {
-        case .winter: return "snowflake"
-        case .rainy: return "cloud.rain.fill"
-        case .fireplace: return "flame.fill"
+        case .catWinter: return "cat.fill"
+        case .dogShelf: return "dog.fill"
+        case .rainyLibrary: return "cloud.rain.fill"
+        case .fireplaceCabin: return "flame.fill"
         }
     }
 }
@@ -367,30 +444,39 @@ public struct ShelfSettings: Codable, Hashable {
     public var ownerName: String
     public var wallTheme: ShelfWallTheme
     public var woodFinish: WoodFinish
+    public var customWallPhotoFilename: String?
     public var fairyLightsEnabled: Bool
     public var warmSpotlightsEnabled: Bool
     public var yearlyBookGoal: Int
+    public var dailyGoalMode: DailyGoalMode
     public var dailyPagesGoal: Int
     public var dailyMinutesGoal: Int
+    public var hasCompletedOnboarding: Bool
 
     public init(
         ownerName: String = "Mein",
-        wallTheme: ShelfWallTheme = .forestVelvet,
-        woodFinish: WoodFinish = .walnut,
+        wallTheme: ShelfWallTheme = .warmOakCabinet,
+        woodFinish: WoodFinish = .oak,
+        customWallPhotoFilename: String? = nil,
         fairyLightsEnabled: Bool = true,
         warmSpotlightsEnabled: Bool = true,
         yearlyBookGoal: Int = 36,
+        dailyGoalMode: DailyGoalMode = .pages,
         dailyPagesGoal: Int = 30,
-        dailyMinutesGoal: Int = 25
+        dailyMinutesGoal: Int = 25,
+        hasCompletedOnboarding: Bool = false
     ) {
         self.ownerName = ownerName
         self.wallTheme = wallTheme
         self.woodFinish = woodFinish
+        self.customWallPhotoFilename = customWallPhotoFilename
         self.fairyLightsEnabled = fairyLightsEnabled
         self.warmSpotlightsEnabled = warmSpotlightsEnabled
         self.yearlyBookGoal = yearlyBookGoal
+        self.dailyGoalMode = dailyGoalMode
         self.dailyPagesGoal = dailyPagesGoal
         self.dailyMinutesGoal = dailyMinutesGoal
+        self.hasCompletedOnboarding = hasCompletedOnboarding
     }
 
     public var displayTitle: String {
@@ -407,6 +493,8 @@ public struct LibrarySnapshot: Codable {
     public var books: [Book]
     public var sessions: [ReadingSession]
     public var decor: [ShelfDecorItem]
+    public var customShelves: [CustomShelf]
+    public var plantState: GrowingPlantState
     public var settings: ShelfSettings
     public var customTropes: [String]
 
@@ -414,12 +502,16 @@ public struct LibrarySnapshot: Codable {
         books: [Book] = [],
         sessions: [ReadingSession] = [],
         decor: [ShelfDecorItem] = [],
+        customShelves: [CustomShelf] = [],
+        plantState: GrowingPlantState = GrowingPlantState(),
         settings: ShelfSettings = ShelfSettings(),
         customTropes: [String] = []
     ) {
         self.books = books
         self.sessions = sessions
         self.decor = decor
+        self.customShelves = customShelves
+        self.plantState = plantState
         self.settings = settings
         self.customTropes = customTropes
     }
@@ -448,8 +540,6 @@ public extension Color {
         )
     }
 }
-
-// MARK: - Built-in Popular Tropes
 
 public enum BuiltInTropes {
     public static let all: [String] = [

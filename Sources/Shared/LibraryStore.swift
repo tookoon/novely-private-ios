@@ -6,7 +6,7 @@ import WidgetKit
 
 public enum LibraryStorage {
     public static let appGroupID = "group.com.novelyprivate.app"
-    private static let fileName = "novely_library_v1.json"
+    private static let fileName = "novely_library_v2.json"
 
     public static var containerURL: URL {
         if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
@@ -65,24 +65,31 @@ public final class LibraryStore: ObservableObject {
     @Published public var books: [Book] = []
     @Published public var sessions: [ReadingSession] = []
     @Published public var decor: [ShelfDecorItem] = []
+    @Published public var customShelves: [CustomShelf] = []
+    @Published public var plantState: GrowingPlantState = GrowingPlantState()
     @Published public var settings: ShelfSettings = ShelfSettings()
     @Published public var customTropes: [String] = []
     @Published public var selectedShelf: ShelfCategory = .read
+    @Published public var selectedCustomShelfId: UUID? = nil
 
     public init(forceDemoData: Bool = false) {
         if forceDemoData {
-            loadDemoLibrary()
-        } else if let snapshot = LibraryStorage.loadSnapshot(), !snapshot.books.isEmpty {
+            loadDemoLibrary(markOnboarded: true)
+        } else if let snapshot = LibraryStorage.loadSnapshot() {
             apply(snapshot: snapshot)
         } else {
-            loadDemoLibrary()
+            // Fresh install: prepare warm defaults and let onboarding choose Demo vs Empty!
+            self.decor = Self.defaultDecor()
+            self.settings = ShelfSettings(hasCompletedOnboarding: false)
         }
     }
 
     private func apply(snapshot: LibrarySnapshot) {
         self.books = snapshot.books
         self.sessions = snapshot.sessions
-        self.decor = snapshot.decor
+        self.decor = snapshot.decor.isEmpty ? Self.defaultDecor() : snapshot.decor
+        self.customShelves = snapshot.customShelves
+        self.plantState = snapshot.plantState
         self.settings = snapshot.settings
         self.customTropes = snapshot.customTropes
     }
@@ -92,6 +99,8 @@ public final class LibraryStore: ObservableObject {
             books: books,
             sessions: sessions,
             decor: decor,
+            customShelves: customShelves,
+            plantState: plantState,
             settings: settings,
             customTropes: customTropes
         )
@@ -99,7 +108,49 @@ public final class LibraryStore: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    // MARK: - CRUD Operations
+    public static func defaultDecor() -> [ShelfDecorItem] {
+        [
+            ShelfDecorItem(kind: .sleepingCat, rowIndex: 0, slotIndex: 2, isEnabled: true),
+            ShelfDecorItem(kind: .monstera, rowIndex: 1, slotIndex: 0, isEnabled: true),
+            ShelfDecorItem(kind: .candle, rowIndex: 0, slotIndex: 0, isEnabled: true),
+            ShelfDecorItem(kind: .snowman, rowIndex: 2, slotIndex: 2, isEnabled: false),
+            ShelfDecorItem(kind: .snowGlobe, rowIndex: 1, slotIndex: 2, isEnabled: false),
+            ShelfDecorItem(kind: .coffeeMug, rowIndex: 2, slotIndex: 0, isEnabled: false)
+        ]
+    }
+
+    // MARK: - Onboarding & Clean Empty Start
+
+    public func startWithEmptyShelf() {
+        books = []
+        sessions = []
+        decor = Self.defaultDecor()
+        settings.hasCompletedOnboarding = true
+        selectedShelf = .unread
+        persist()
+    }
+
+    public func clearAllBooks() {
+        books = []
+        sessions = []
+        persist()
+    }
+
+    // MARK: - Background Real Cover Hydration
+
+    public func hydrateRealCoversIfNeeded() async {
+        let targets = books.filter { $0.customCoverFilename == nil && !$0.isbn.isEmpty }
+        for book in targets {
+            if let result = await BookMetadataService.downloadAndStoreCover(urlString: book.coverURLString, isbn: book.isbn) {
+                if let idx = books.firstIndex(where: { $0.id == book.id }) {
+                    books[idx].customCoverFilename = result.filename
+                    persist()
+                }
+            }
+        }
+    }
+
+    // MARK: - CRUD & Drag/Reorder Operations
 
     public func addBook(_ book: Book) {
         var newBook = book
@@ -120,7 +171,53 @@ public final class LibraryStore: ObservableObject {
         persist()
     }
 
-    public func logProgress(for bookId: UUID, newPage: Int, durationSeconds: Int = 900, roomTheme: ReadingRoomTheme = .winter) {
+    public func moveBook(_ book: Book, direction: Int) {
+        let shelfList = activeShelfBooks
+        guard let currentPos = shelfList.firstIndex(where: { $0.id == book.id }) else { return }
+        let targetPos = currentPos + direction
+        guard shelfList.indices.contains(targetPos) else { return }
+        let other = shelfList[targetPos]
+        guard let idxA = books.firstIndex(where: { $0.id == book.id }),
+              let idxB = books.firstIndex(where: { $0.id == other.id }) else { return }
+        let tempOrder = books[idxA].sortOrder
+        books[idxA].sortOrder = books[idxB].sortOrder
+        books[idxB].sortOrder = tempOrder
+        persist()
+    }
+
+    public func cycleDisplayStyle(for book: Book) {
+        guard let idx = books.firstIndex(where: { $0.id == book.id }) else { return }
+        let all = BookDisplayStyle.allCases
+        if let cur = all.firstIndex(of: books[idx].displayStyle) {
+            books[idx].displayStyle = all[(cur + 1) % all.count]
+            persist()
+        }
+    }
+
+    public func shiftDecor(_ item: ShelfDecorItem, slotDelta: Int = 0, rowDelta: Int = 0) {
+        guard let idx = decor.firstIndex(where: { $0.id == item.id }) else { return }
+        decor[idx].slotIndex = min(2, max(0, decor[idx].slotIndex + slotDelta))
+        decor[idx].rowIndex = min(4, max(0, decor[idx].rowIndex + rowDelta))
+        persist()
+    }
+
+    public func toggleDecor(_ kind: DecorKind, rowIndex: Int = 0) {
+        if let idx = decor.firstIndex(where: { $0.kind == kind }) {
+            decor[idx].isEnabled.toggle()
+        } else {
+            decor.append(ShelfDecorItem(kind: kind, rowIndex: rowIndex, slotIndex: 2, isEnabled: true))
+        }
+        persist()
+    }
+
+    public func addCustomShelf(name: String, iconName: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        customShelves.append(CustomShelf(name: trimmed, iconName: iconName))
+        persist()
+    }
+
+    public func logProgress(for bookId: UUID, newPage: Int, durationSeconds: Int = 900, roomTheme: ReadingRoomTheme = .catWinter) {
         guard let idx = books.firstIndex(where: { $0.id == bookId }) else { return }
         let oldPage = books[idx].currentPage
         let clamped = min(max(0, newPage), books[idx].pageCount)
@@ -150,20 +247,28 @@ public final class LibraryStore: ObservableObject {
         persist()
     }
 
-    public func addQuote(to bookId: UUID, text: String, pageNumber: Int?) {
+    public func addQuote(to bookId: UUID, text: String, pageNumber: Int?, isThought: Bool = false) {
         guard let idx = books.firstIndex(where: { $0.id == bookId }) else { return }
-        let quote = BookQuote(text: text, pageNumber: pageNumber)
+        let quote = BookQuote(text: text, pageNumber: pageNumber, isThought: isThought)
         books[idx].quotes.insert(quote, at: 0)
         persist()
     }
 
-    public func toggleDecor(_ kind: DecorKind, rowIndex: Int = 0) {
-        if let idx = decor.firstIndex(where: { $0.kind == kind }) {
-            decor[idx].isEnabled.toggle()
-        } else {
-            decor.append(ShelfDecorItem(kind: kind, rowIndex: rowIndex, isEnabled: true))
+    // MARK: - Filtering & Derived Queries
+
+    public var activeShelfBooks: [Book] {
+        if let customId = selectedCustomShelfId {
+            return books.filter { $0.customShelfIDs.contains(customId) }.sorted { $0.sortOrder < $1.sortOrder }
         }
-        persist()
+        return books(for: selectedShelf)
+    }
+
+    public var activeShelfTitle: String {
+        if let customId = selectedCustomShelfId,
+           let custom = customShelves.first(where: { $0.id == customId }) {
+            return custom.name
+        }
+        return selectedShelf.rawValue
     }
 
     public func books(for shelf: ShelfCategory) -> [Book] {
@@ -182,6 +287,43 @@ public final class LibraryStore: ObservableObject {
         books.flatMap { book in
             book.quotes.map { (book, $0) }
         }.sorted { $0.1.dateAdded > $1.1.dateAdded }
+    }
+
+    public var sortedSessions: [ReadingSession] {
+        sessions.sorted { $0.date > $1.date }
+    }
+
+    /// Growing plant stage (1...5) based on total unique reading days!
+    public var plantGrowthStage: Int {
+        let cal = Calendar.current
+        let uniqueDays = Set(sessions.map { cal.startOfDay(for: $0.date) }).count
+        switch uniqueDays {
+        case 0...1: return 1
+        case 2...4: return 2
+        case 5...9: return 3
+        case 10...17: return 4
+        default: return 5
+        }
+    }
+
+    /// Estimated reading pace in pages per hour
+    public var pagesPerHour: Double {
+        let totalPages = sessions.reduce(0) { $0 + $1.pagesRead }
+        let totalHours = Double(sessions.reduce(0) { $0 + $1.durationSeconds }) / 3600.0
+        guard totalHours > 0.2, totalPages > 0 else { return 38.0 }
+        return min(120.0, max(15.0, Double(totalPages) / totalHours))
+    }
+
+    public func estimatedRemainingTimeString(for book: Book) -> String {
+        let remaining = max(0, book.pageCount - book.currentPage)
+        guard remaining > 0 else { return "Fertig gelesen" }
+        let hours = Double(remaining) / pagesPerHour
+        let wholeHours = Int(hours)
+        let mins = Int((hours - Double(wholeHours)) * 60)
+        if wholeHours == 0 {
+            return "Noch ca. \(max(5, mins)) Min."
+        }
+        return "Noch ca. \(wholeHours) Std. \(mins) Min."
     }
 
     // MARK: - Reading Statistics & Streaks
@@ -207,6 +349,11 @@ public final class LibraryStore: ObservableObject {
         return sessions.filter { cal.isDateInToday($0.date) }.reduce(0) { $0 + $1.pagesRead }
     }
 
+    public var minutesReadToday: Int {
+        let cal = Calendar.current
+        return sessions.filter { cal.isDateInToday($0.date) }.reduce(0) { $0 + $1.durationSeconds } / 60
+    }
+
     public var lastBookReadToday: Book? {
         let cal = Calendar.current
         guard let latest = sessions
@@ -216,19 +363,21 @@ public final class LibraryStore: ObservableObject {
         return books.first { $0.id == latest.bookId }
     }
 
-    public func weekReadingActivity() -> [Bool] {
+    public func currentWeekDates() -> [Date] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        let weekday = cal.component(.weekday, from: today) // 1=Sun, 2=Mon...
+        let weekday = cal.component(.weekday, from: today)
         let daysSinceMonday = (weekday + 5) % 7
         guard let monday = cal.date(byAdding: .day, value: -daysSinceMonday, to: today) else {
-            return Array(repeating: false, count: 7)
+            return []
         }
+        return (0..<7).compactMap { cal.date(byAdding: .day, value: $0, to: monday) }
+    }
+
+    public func weekReadingActivity() -> [Bool] {
+        let cal = Calendar.current
         let activeDays = Set(sessions.map { cal.startOfDay(for: $0.date) })
-        return (0..<7).map { offset in
-            guard let d = cal.date(byAdding: .day, value: offset, to: monday) else { return false }
-            return activeDays.contains(d)
-        }
+        return currentWeekDates().map { activeDays.contains(cal.startOfDay(for: $0)) }
     }
 
     public func monthlyStats(for monthDate: Date) -> (booksCount: Int, pagesCount: Int, readingDays: Int) {
@@ -287,6 +436,8 @@ public final class LibraryStore: ObservableObject {
             books: books,
             sessions: sessions,
             decor: decor,
+            customShelves: customShelves,
+            plantState: plantState,
             settings: settings,
             customTropes: customTropes
         )
@@ -305,7 +456,6 @@ public final class LibraryStore: ObservableObject {
         return true
     }
 
-    /// Parses Goodreads or StoryGraph CSV exports
     @discardableResult
     public func importGoodreadsCSV(_ csvText: String) -> Int {
         let lines = csvText.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -367,9 +517,9 @@ public final class LibraryStore: ObservableObject {
         return result
     }
 
-    // MARK: - Rich Realistic German Demo Library
+    // MARK: - Rich German Demo Library (with real ISBNs & synopses!)
 
-    public func loadDemoLibrary() {
+    public func loadDemoLibrary(markOnboarded: Bool = true) {
         let cal = Calendar.current
         let now = Date()
 
@@ -378,6 +528,10 @@ public final class LibraryStore: ObservableObject {
             author: "Rebecca Yarros",
             isbn: "9783423283977",
             publisher: "dtv",
+            publishedYear: "2023",
+            bindingType: "Gebunden",
+            originalTitle: "Iron Flame",
+            bookDescription: "Jeder erwartete, dass Violet Sorrengail während ihres ersten Jahres am Basgiath War College sterben würde – Violet eingeschlossen. Doch das erste Jahr war nur der Anfang. Nun beginnt das wahre Training, und Geheimnisse, die jahrhundertelang verborgen lagen, drohen alles zu zerstören.",
             pageCount: 960,
             currentPage: 960,
             heightCm: 23.5,
@@ -392,7 +546,6 @@ public final class LibraryStore: ObservableObject {
             seriesIndex: 2,
             seriesTotal: 5,
             tropes: ["Enemies to Lovers", "Dragons", "Magic Academy"],
-            notes: "Absolutes Jahreshighlight – das Ende hat mich zerstört!",
             quotes: [
                 BookQuote(text: "Ein Drache ohne seinen Reiter ist eine Tragödie. Ein Reiter ohne seinen Drachen ist tot.", pageNumber: 142, dateAdded: cal.date(byAdding: .day, value: -6, to: now)!)
             ],
@@ -407,6 +560,10 @@ public final class LibraryStore: ObservableObject {
             author: "Leigh Bardugo",
             isbn: "9783426525722",
             publisher: "Knaur",
+            publishedYear: "2017",
+            bindingType: "Taschenbuch",
+            originalTitle: "Six of Crows",
+            bookDescription: "Ketterdam: eine pulsierende Hafenstadt, in der alles käuflich ist. Niemand weiß das besser als das kriminelle Genie Kaz Brekker. Als ihm ein Auftrag angeboten wird, der ihn unermesslich reich machen könnte, stellt er eine Crew aus sechs gefährlichen Außenseitern zusammen.",
             pageCount: 592,
             currentPage: 592,
             heightCm: 21.8,
@@ -421,7 +578,6 @@ public final class LibraryStore: ObservableObject {
             seriesIndex: 1,
             seriesTotal: 2,
             tropes: ["Heist", "Found Family", "Morally Grey"],
-            notes: "Keine Trauernden. Keine Beerdigungen.",
             quotes: [
                 BookQuote(text: "Keine Trauernden. Keine Beerdigungen.", pageNumber: 88, dateAdded: cal.date(byAdding: .day, value: -9, to: now)!)
             ],
@@ -435,6 +591,10 @@ public final class LibraryStore: ObservableObject {
             author: "Sarah J. Maas",
             isbn: "9783423716512",
             publisher: "dtv",
+            publishedYear: "2013",
+            bindingType: "Taschenbuch",
+            originalTitle: "Throne of Glass",
+            bookDescription: "Celaena Sardothien ist die berüchtigtste Assassinin von Adarlan. Als der Kronprinz ihr die Freiheit verspricht, falls sie für ihn ein tödliches Turnier gewinnt, stürzt sie sich in einen Wettkampf voller Intrigen und dunkler Magie.",
             pageCount: 512,
             currentPage: 512,
             heightCm: 22.4,
@@ -459,6 +619,10 @@ public final class LibraryStore: ObservableObject {
             author: "Rebecca Yarros",
             isbn: "9783423283403",
             publisher: "dtv",
+            publishedYear: "2023",
+            bindingType: "Gebunden",
+            originalTitle: "Fourth Wing",
+            bookDescription: "Violet Sorrengail hat sich ihr ganzes Leben auf ein ruhiges Dasein unter Büchern vorbereitet. Doch ihre Mutter befiehlt ihr, dem berüchtigten Reiterquadranten beizutreten – wo Drachen sich keine schwachen Menschen aussuchen.",
             pageCount: 768,
             currentPage: 768,
             heightCm: 23.4,
@@ -480,31 +644,14 @@ public final class LibraryStore: ObservableObject {
         )
 
         let b5 = Book(
-            title: "Der Schatten des Windes",
-            author: "Carlos Ruiz Zafón",
-            isbn: "9783518458006",
-            publisher: "Suhrkamp",
-            pageCount: 564,
-            currentPage: 564,
-            heightCm: 21.0,
-            shelf: .read,
-            displayStyle: .spine,
-            spineColorHex: "#263B4D",
-            spineAccentHex: "#C9A86A",
-            spineTextColorHex: "#EFE6D5",
-            spineTypography: .serif,
-            rating: 5.0,
-            tropes: ["Dark Academia", "Klassiker", "Plot Twist"],
-            purchasePrice: 16.00,
-            dateFinished: cal.date(byAdding: .day, value: -20, to: now),
-            sortOrder: 4
-        )
-
-        let b6 = Book(
             title: "The Seven Husbands of Evelyn Hugo",
             author: "Taylor Jenkins Reid",
             isbn: "9781501161933",
             publisher: "Atria",
+            publishedYear: "2017",
+            bindingType: "Taschenbuch",
+            originalTitle: "The Seven Husbands of Evelyn Hugo",
+            bookDescription: "Die legendäre Hollywood-Ikone Evelyn Hugo ist endlich bereit, die Wahrheit über ihr glamouröses und skandalöses Leben zu erzählen – und wählt ausgerechnet die unbekannte Journalistin Monique Grant dafür aus.",
             pageCount: 400,
             currentPage: 400,
             heightCm: 20.5,
@@ -518,14 +665,17 @@ public final class LibraryStore: ObservableObject {
             tropes: ["Slow Burn", "Plot Twist"],
             purchasePrice: 15.90,
             dateFinished: cal.date(byAdding: .day, value: -22, to: now),
-            sortOrder: 5
+            sortOrder: 4
         )
 
-        let b7 = Book(
+        let b6 = Book(
             title: "Book Lovers",
             author: "Emily Henry",
             isbn: "9780593334836",
             publisher: "Berkley",
+            publishedYear: "2022",
+            bindingType: "Taschenbuch",
+            bookDescription: "Nora Stephens lebt für Bücher – als knallharte Literaturagentin in New York. Als ihre Schwester sie zu einem Sommerurlaub in eine kleine Bilderbuch-Stadt überredet, läuft sie dort ausgerechnet ihrem größten Rivalen Charlie Lastra über den Weg.",
             pageCount: 384,
             currentPage: 384,
             heightCm: 20.2,
@@ -539,14 +689,17 @@ public final class LibraryStore: ObservableObject {
             tropes: ["Enemies to Lovers", "Grumpy × Sunshine"],
             purchasePrice: 14.50,
             dateFinished: cal.date(byAdding: .day, value: -25, to: now),
-            sortOrder: 6
+            sortOrder: 5
         )
 
-        let b8 = Book(
+        let b7 = Book(
             title: "Happy Place",
             author: "Emily Henry",
             isbn: "9780593441275",
             publisher: "Berkley",
+            publishedYear: "2023",
+            bindingType: "Taschenbuch",
+            bookDescription: "Harriet und Wyn waren seit dem College das perfekte Paar – bis sie sich vor sechs Monaten getrennt haben. Doch ihren besten Freunden haben sie es noch nicht gesagt, und nun steht der letzte gemeinsame Sommerurlaub in Maine bevor.",
             pageCount: 400,
             currentPage: 400,
             heightCm: 20.2,
@@ -560,6 +713,31 @@ public final class LibraryStore: ObservableObject {
             tropes: ["Second Chance", "Fake Dating"],
             purchasePrice: 14.50,
             dateFinished: cal.date(byAdding: .day, value: -27, to: now),
+            sortOrder: 6
+        )
+
+        let b8 = Book(
+            title: "Die stumme Patientin",
+            author: "Alex Michaelides",
+            isbn: "9783426524510",
+            publisher: "Droemer",
+            publishedYear: "2019",
+            bindingType: "Taschenbuch",
+            originalTitle: "The Silent Patient",
+            bookDescription: "Alicia Berenson erschießt ihren Ehemann fünfmal ins Gesicht – und spricht danach nie wieder ein einziges Wort. Der forensische Psychotherapeut Theo Faber ist besessen davon, das Geheimnis ihres Schweigens zu lüften.",
+            pageCount: 416,
+            currentPage: 416,
+            heightCm: 21.5,
+            shelf: .read,
+            displayStyle: .coverForward,
+            spineColorHex: "#1C2930",
+            spineAccentHex: "#87A4B0",
+            spineTextColorHex: "#EAF0F2",
+            spineTypography: .modern,
+            rating: 4.5,
+            tropes: ["Psychological Thriller", "Unreliable Narrator", "Plot Twist"],
+            purchasePrice: 17.00,
+            dateFinished: cal.date(byAdding: .day, value: -18, to: now),
             sortOrder: 7
         )
 
@@ -568,6 +746,9 @@ public final class LibraryStore: ObservableObject {
             author: "Franz Kafka",
             isbn: "9783150099001",
             publisher: "Reclam",
+            publishedYear: "1915",
+            bindingType: "Taschenbuch",
+            bookDescription: "Eines Morgens erwacht der Handelsreisende Gregor Samsa in seinem Bett und stellt fest, dass er sich über Nacht in ein ungeheueres Ungeziefer verwandelt hat.",
             pageCount: 160,
             currentPage: 160,
             heightCm: 17.8,
@@ -587,54 +768,16 @@ public final class LibraryStore: ObservableObject {
             sortOrder: 8
         )
 
-        let b10 = Book(
-            title: "Die stumme Patientin",
-            author: "Alex Michaelides",
-            isbn: "9783426524510",
-            publisher: "Droemer",
-            pageCount: 416,
-            currentPage: 416,
-            heightCm: 21.5,
-            shelf: .read,
-            displayStyle: .coverForward,
-            spineColorHex: "#1C2930",
-            spineAccentHex: "#87A4B0",
-            spineTextColorHex: "#EAF0F2",
-            spineTypography: .modern,
-            rating: 4.5,
-            tropes: ["Psychological Thriller", "Unreliable Narrator", "Plot Twist"],
-            purchasePrice: 17.00,
-            dateFinished: cal.date(byAdding: .day, value: -18, to: now),
-            sortOrder: 9
-        )
-
-        let b11 = Book(
-            title: "Animal Farm",
-            author: "George Orwell",
-            isbn: "9780141036137",
-            publisher: "Penguin",
-            pageCount: 144,
-            currentPage: 144,
-            heightCm: 18.5,
-            shelf: .read,
-            displayStyle: .spine,
-            spineColorHex: "#3C4F3D",
-            spineAccentHex: "#E3B873",
-            spineTextColorHex: "#F4ECE0",
-            spineTypography: .serif,
-            rating: 5.0,
-            tropes: ["Klassiker", "Dystopie"],
-            purchasePrice: 11.00,
-            dateFinished: cal.date(byAdding: .day, value: -10, to: now),
-            sortOrder: 10
-        )
-
         // Currently Reading
         let c1 = Book(
             title: "Yellowface",
             author: "R. F. Kuang",
             isbn: "9783847901594",
             publisher: "Eichborn",
+            publishedYear: "2023",
+            bindingType: "Gebunden",
+            originalTitle: "Yellowface",
+            bookDescription: "Als die gefeierte Bestsellerautorin Athena Liu bei einem bizarren Unfall stirbt, stiehlt ihre erfolglose Rivalin June Hayward ihr unveröffentlichtes Manuskript – und veröffentlicht es unter eigenem Namen.",
             pageCount: 352,
             currentPage: 301,
             heightCm: 21.2,
@@ -646,13 +789,12 @@ public final class LibraryStore: ObservableObject {
             spineTypography: .modern,
             rating: 4.5,
             tropes: ["Unreliable Narrator", "Psychological Thriller"],
-            notes: "Wird auf jeden Fall nochmal gelesen.",
             quotes: [
                 BookQuote(text: "Wird auf jeden Fall nochmal gelesen – so bissig und erschreckend realistisch.", pageNumber: 240, dateAdded: now)
             ],
             purchasePrice: 22.00,
             dateStarted: cal.date(byAdding: .day, value: -4, to: now),
-            sortOrder: 11
+            sortOrder: 9
         )
 
         let c2 = Book(
@@ -660,6 +802,10 @@ public final class LibraryStore: ObservableObject {
             author: "Rebecca Yarros",
             isbn: "9783423284455",
             publisher: "dtv",
+            publishedYear: "2025",
+            bindingType: "Gebunden",
+            originalTitle: "Onyx Storm",
+            bookDescription: "Nach fast achtzehn Monaten am Basgiath War College hat Violet Sorrengail keine Zeit mehr für Unterricht. Der Kampf hat wirklich begonnen – und Violet muss weit über die Grenzen von Navarre hinausreisen.",
             pageCount: 823,
             currentPage: 253,
             heightCm: 23.6,
@@ -669,7 +815,6 @@ public final class LibraryStore: ObservableObject {
             spineAccentHex: "#B59C72",
             spineTextColorHex: "#ECE5D8",
             spineTypography: .ornate,
-            rating: 0,
             seriesName: "Flammengeküsst",
             seriesIndex: 3,
             seriesTotal: 5,
@@ -677,15 +822,40 @@ public final class LibraryStore: ObservableObject {
             purchasePrice: 29.00,
             isSpecialEdition: true,
             dateStarted: cal.date(byAdding: .day, value: -2, to: now),
-            sortOrder: 12
+            sortOrder: 10
         )
 
-        // Unread (SuB)
+        // Unread
         let u1 = Book(
+            title: "Eine neue Erde",
+            author: "Eckhart Tolle",
+            isbn: "9783442341887",
+            publisher: "Arkana",
+            publishedYear: "2005",
+            bindingType: "Gebunden",
+            originalTitle: "A New Earth",
+            bookDescription: "Ein Wegweiser für alle, die ihr Bewusstsein vertiefen und gleichzeitig verstehen möchten, wie persönliches Erwachen unsere Welt verändern kann.",
+            pageCount: 347,
+            currentPage: 0,
+            heightCm: 21.5,
+            shelf: .unread,
+            displayStyle: .coverForward,
+            spineColorHex: "#1E52A8",
+            spineAccentHex: "#DCE8F7",
+            spineTextColorHex: "#FFFFFF",
+            spineTypography: .modern,
+            purchasePrice: 22.00,
+            sortOrder: 11
+        )
+
+        let u2 = Book(
             title: "Babel",
             author: "R. F. Kuang",
             isbn: "9783847901433",
             publisher: "Eichborn",
+            publishedYear: "2023",
+            bindingType: "Gebunden",
+            bookDescription: "Oxford, 1836: Im Königlichen Institut für Übersetzung – genannt Babel – ist Sprache buchstäblich Magie. Doch Macht hat ihren Preis.",
             pageCount: 688,
             currentPage: 0,
             heightCm: 22.8,
@@ -697,45 +867,7 @@ public final class LibraryStore: ObservableObject {
             spineTypography: .serif,
             tropes: ["Dark Academia", "Magic Academy", "Found Family"],
             purchasePrice: 26.00,
-            sortOrder: 13
-        )
-
-        let u2 = Book(
-            title: "Gödel, Escher, Bach",
-            author: "Douglas R. Hofstadter",
-            isbn: "9783608943382",
-            publisher: "Klett-Cotta",
-            pageCount: 844,
-            currentPage: 0,
-            heightCm: 24.0,
-            shelf: .unread,
-            displayStyle: .spine,
-            spineColorHex: "#DFD5C5",
-            spineAccentHex: "#B84231",
-            spineTextColorHex: "#8C2A1E",
-            spineTypography: .serif,
-            tropes: ["Philosophie", "Klassiker"],
-            purchasePrice: 34.00,
-            sortOrder: 14
-        )
-
-        let u3 = Book(
-            title: "Der geheime Garten",
-            author: "Frances Hodgson Burnett",
-            isbn: "9783458364900",
-            publisher: "Insel",
-            pageCount: 312,
-            currentPage: 0,
-            heightCm: 19.6,
-            shelf: .unread,
-            displayStyle: .coverForward,
-            spineColorHex: "#2B4A38",
-            spineAccentHex: "#DFC389",
-            spineTextColorHex: "#F5EFE4",
-            spineTypography: .serif,
-            tropes: ["Klassiker", "Coming of Age"],
-            purchasePrice: 14.00,
-            sortOrder: 15
+            sortOrder: 12
         )
 
         // Wishlist
@@ -744,6 +876,9 @@ public final class LibraryStore: ObservableObject {
             author: "Leigh Bardugo",
             isbn: "9783426525739",
             publisher: "Knaur",
+            publishedYear: "2018",
+            bindingType: "Taschenbuch",
+            originalTitle: "Crooked Kingdom",
             pageCount: 624,
             currentPage: 0,
             heightCm: 21.8,
@@ -758,15 +893,17 @@ public final class LibraryStore: ObservableObject {
             seriesTotal: 2,
             tropes: ["Heist", "Found Family"],
             purchasePrice: 22.00,
-            sortOrder: 16
+            sortOrder: 13
         )
 
-        // Lent book
+        // Lent
         let l1 = Book(
             title: "Der Fremde",
             author: "Albert Camus",
             isbn: "9783499221897",
             publisher: "Rowohlt",
+            publishedYear: "1942",
+            bindingType: "Taschenbuch",
             pageCount: 160,
             currentPage: 160,
             heightCm: 19.0,
@@ -779,52 +916,44 @@ public final class LibraryStore: ObservableObject {
             rating: 4.5,
             tropes: ["Klassiker", "Philosophie"],
             purchasePrice: 12.00,
-            lentTo: "Jonas",
+            lentTo: "Gizem",
             lentDate: cal.date(byAdding: .day, value: -11, to: now),
-            sortOrder: 17
+            sortOrder: 14
         )
 
-        self.books = [b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, c1, c2, u1, u2, u3, w1, l1]
+        self.books = [b1, b2, b3, b4, b5, b6, b7, b8, b9, c1, c2, u1, u2, w1, l1]
 
-        // Generate 11-day streak + rich monthly calendar reading history
         var generatedSessions: [ReadingSession] = []
-        let calendarBooks = [c1, c2, b1, b2, b3, b4, b9, b10]
+        let calendarBooks = [c1, c2, b1, b2, b3, b4, b8, b9]
         for dayOffset in 0..<22 {
-            // Skip days 12 and 15 to show realistic gaps before the 11-day streak
             if dayOffset == 11 || dayOffset == 14 { continue }
             guard let date = cal.date(byAdding: .day, value: -dayOffset, to: now) else { continue }
             let book = calendarBooks[dayOffset % calendarBooks.count]
-            let pages = dayOffset == 0 ? 112 : (35 + (dayOffset * 17) % 68)
+            let pages = dayOffset == 0 ? 48 : (28 + (dayOffset * 13) % 52)
             generatedSessions.append(
                 ReadingSession(
                     bookId: book.id,
                     date: date,
-                    durationSeconds: 1800 + (dayOffset % 4) * 600,
+                    durationSeconds: 1800 + (dayOffset % 4) * 900,
                     pagesRead: pages,
-                    roomTheme: dayOffset % 3 == 0 ? .winter : (dayOffset % 3 == 1 ? .rainy : .fireplace)
+                    roomTheme: dayOffset % 3 == 0 ? .catWinter : (dayOffset % 3 == 1 ? .dogShelf : .fireplaceCabin)
                 )
             )
         }
         self.sessions = generatedSessions
-
-        self.decor = [
-            ShelfDecorItem(kind: .candle, rowIndex: 0, isEnabled: true),
-            ShelfDecorItem(kind: .monstera, rowIndex: 1, isEnabled: true),
-            ShelfDecorItem(kind: .snowGlobe, rowIndex: 2, isEnabled: true),
-            ShelfDecorItem(kind: .coffeeMug, rowIndex: 0, isEnabled: false),
-            ShelfDecorItem(kind: .hourglass, rowIndex: 1, isEnabled: false),
-            ShelfDecorItem(kind: .pinecones, rowIndex: 2, isEnabled: false)
-        ]
-
+        self.decor = Self.defaultDecor()
+        self.plantState = GrowingPlantState(plantName: "Monstera", isAdopted: true, isBannerDismissed: false)
         self.settings = ShelfSettings(
             ownerName: "Mein",
-            wallTheme: .forestVelvet,
-            woodFinish: .walnut,
+            wallTheme: .warmOakCabinet,
+            woodFinish: .oak,
             fairyLightsEnabled: true,
             warmSpotlightsEnabled: true,
             yearlyBookGoal: 36,
+            dailyGoalMode: .pages,
             dailyPagesGoal: 30,
-            dailyMinutesGoal: 25
+            dailyMinutesGoal: 25,
+            hasCompletedOnboarding: markOnboarded
         )
         persist()
     }

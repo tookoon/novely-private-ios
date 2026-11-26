@@ -5,43 +5,47 @@ struct BookDetailSheet: View {
     @EnvironmentObject private var store: LibraryStore
     @Environment(\.dismiss) private var dismiss
 
+    var onStartReading: ((Book) -> Void)?
+
     @State private var book: Book
     @State private var rotationY: Double = -18
     @State private var dragStartRotation: Double = -18
     @State private var selectedCoverPhoto: PhotosPickerItem?
-    @State private var selectedSpinePhoto: PhotosPickerItem?
     @State private var newQuoteText = ""
     @State private var newQuotePage = ""
+    @State private var isThoughtMode = false
     @State private var showingQuoteScanner = false
     @State private var showingSpineScanner = false
     @State private var showingDeleteConfirm = false
+    @State private var expandDescription = false
 
     private let spineColorPresets = [
         "#1E1A18", "#8C2622", "#142738", "#B57B3C",
         "#263B4D", "#174B3E", "#C24658", "#E06A3E",
-        "#D4A73B", "#352A47", "#2B4A38", "#DFD5C5"
+        "#D4A73B", "#352A47", "#2B4A38", "#1E52A8"
     ]
 
-    init(book: Book) {
+    init(book: Book, onStartReading: ((Book) -> Void)? = nil) {
         _book = State(initialValue: book)
+        self.onStartReading = onStartReading
     }
 
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .bottom) {
                 LinearGradient(
-                    colors: [Color(hex: book.spineColorHex).opacity(0.35), NovelyTheme.espressoBg],
+                    colors: [Color(hex: book.spineColorHex).opacity(0.40), NovelyTheme.espressoBg],
                     startPoint: .top,
                     endPoint: .center
                 )
                 .ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 22) {
-                        // Interactive 3D Rotatable Hardcover Book!
+                    VStack(spacing: 20) {
+                        // Interactive 3D Hardcover Book Stage (with realistic Farbschnitt page edges!)
                         interactive3DBookStage
 
-                        // Title, Author & Rating
+                        // Title, Author, Binding & Rating
                         VStack(spacing: 6) {
                             Text(book.title)
                                 .font(.system(size: 26, weight: .bold, design: .serif))
@@ -51,22 +55,27 @@ struct BookDetailSheet: View {
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundStyle(NovelyTheme.warmMutedText)
 
-                            if let series = book.seriesName, !series.isEmpty {
-                                Text("\(series)\(book.seriesIndex.map { " · Band \($0)" } ?? "")")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(NovelyTheme.warmGold)
-                                    .padding(.top, 2)
-                            }
+                            HStack(spacing: 8) {
+                                Text(book.bindingType)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(NovelyTheme.creamText.opacity(0.85))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .novelyGlassCapsule()
 
-                            // Interactive 5-Star Rating (0.5 steps)
+                                if let series = book.seriesName, !series.isEmpty {
+                                    Text("\(series)\(book.seriesIndex.map { " · Band \($0)" } ?? "")")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(NovelyTheme.warmGold)
+                                }
+                            }
+                            .padding(.top, 2)
+
+                            // 5-Star Rating (0.5 steps)
                             HStack(spacing: 8) {
                                 ForEach(1...5, id: \.self) { star in
                                     Button {
-                                        if book.rating == Double(star) {
-                                            book.rating = Double(star) - 0.5
-                                        } else {
-                                            book.rating = Double(star)
-                                        }
+                                        book.rating = (book.rating == Double(star)) ? (Double(star) - 0.5) : Double(star)
                                         store.updateBook(book)
                                     } label: {
                                         Image(systemName: starImage(for: star))
@@ -76,18 +85,29 @@ struct BookDetailSheet: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                            .padding(.top, 8)
+                            .padding(.top, 6)
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 16)
 
-                        // Reading Progress Card
+                        // Reading Progress & Estimated Remaining Time
                         progressSection
 
-                        // Shelf & Display Style Controls
+                        // "Worum es geht" (Real Book Synopsis from Reel 2!)
+                        if !book.bookDescription.isEmpty {
+                            synopsisSection
+                        }
+
+                        // Shelf & Arrangement
                         shelfArrangementSection
 
                         // Real Spine / Cover Photo + Color Customization
                         appearanceSection
+
+                        // Quotes & Thoughts (+ Zitat / + Gedanke like Reel 2!)
+                        quotesSection
+
+                        // "Weitere Details" Metadata Table (like Reel 2!)
+                        metadataDetailsSection
 
                         // Tropes
                         tropesSection
@@ -95,10 +115,6 @@ struct BookDetailSheet: View {
                         // Mein Exemplar & Verliehen
                         editionAndLendingSection
 
-                        // Quotes & Notes
-                        quotesSection
-
-                        // Delete Button
                         Button(role: .destructive) {
                             showingDeleteConfirm = true
                         } label: {
@@ -108,10 +124,29 @@ struct BookDetailSheet: View {
                                 .padding(.vertical, 12)
                                 .novelyGlassCard(cornerRadius: 16, tint: .red.opacity(0.18))
                         }
-                        .padding(.bottom, 30)
+
+                        Spacer(minLength: 90)
                     }
                     .padding(.horizontal, 18)
-                    .padding(.top, 10)
+                    .padding(.top, 8)
+                }
+
+                // Floating bottom "Anfangen" / "Weiterlesen" Pill Button (like Reel 2!)
+                if let onStartReading {
+                    Button {
+                        store.updateBook(book)
+                        onStartReading(book)
+                    } label: {
+                        Text(book.currentPage > 0 && book.currentPage < book.pageCount ? "Weiterlesen" : "Anfangen")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 15)
+                            .background(NovelyTheme.creamText, in: Capsule())
+                            .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -145,15 +180,6 @@ struct BookDetailSheet: View {
                     }
                 }
             }
-            .onChange(of: selectedSpinePhoto) { _, newItem in
-                Task {
-                    if let data = try? await newItem?.loadTransferable(type: Data.self),
-                       let filename = LibraryStorage.saveImageData(data, prefix: "spine") {
-                        book.customSpineFilename = filename
-                        store.updateBook(book)
-                    }
-                }
-            }
             .sheet(isPresented: $showingQuoteScanner) {
                 QuoteOCRScannerView(book: book) { extractedQuote, pageNum in
                     store.addQuote(to: book.id, text: extractedQuote, pageNumber: pageNum)
@@ -171,42 +197,53 @@ struct BookDetailSheet: View {
         }
     }
 
-    // MARK: - Interactive 3D Book Stage
+    // MARK: - Interactive 3D Book Stage with Realistic Farbschnitt
 
     private var interactive3DBookStage: some View {
         VStack(spacing: 10) {
             ZStack {
-                // Soft floor shadow
                 Ellipse()
                     .fill(.black.opacity(0.55))
-                    .frame(width: 150, height: 22)
+                    .frame(width: 155, height: 22)
                     .blur(radius: 10)
-                    .offset(y: 95)
+                    .offset(y: 96)
 
-                // 3D Composite: Spine + Cover + Page Edges
                 HStack(spacing: 0) {
-                    BookSpineView(book: book, scale: 1.35)
-                        .opacity(rotationY < 10 ? 1 : 0.4)
-                    BookCoverForwardView(book: book, scale: 1.35)
+                    BookSpineView(book: book, scale: 1.32)
+                        .opacity(rotationY < 15 ? 1 : 0.35)
+                    BookCoverForwardView(book: book, scale: 1.32)
+                    // Realistic page block / Farbschnitt edge on the right!
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: book.isSpecialEdition
+                                    ? [Color(hex: book.spineAccentHex), Color(hex: book.spineColorHex), Color(hex: book.spineAccentHex)]
+                                    : [Color(hex: "#EDE6D8"), Color(hex: "#D5CCB8"), Color(hex: "#E8E0CF")],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: rotationY > 5 ? 12 : 4, height: book.spineHeightPoints * 1.28)
+                        .clipShape(RoundedRectangle(cornerRadius: 1.5))
                 }
                 .rotation3DEffect(
                     .degrees(rotationY),
-                    axis: (x: 0.08, y: 1, z: 0),
+                    axis: (x: 0.06, y: 1, z: 0),
                     perspective: 0.45
                 )
                 .gesture(
                     DragGesture()
                         .onChanged { value in
-                            rotationY = max(-65, min(45, dragStartRotation + Double(value.translation.width) * 0.5))
+                            rotationY = max(-65, min(55, dragStartRotation + Double(value.translation.width) * 0.5))
                         }
                         .onEnded { _ in
                             dragStartRotation = rotationY
                         }
                 )
             }
-            .frame(height: 220)
+            .frame(height: 215)
 
-            Label("Ziehen zum 3D-Drehen", systemImage: "rotate.3d")
+            Label("Ziehen zum 3D-Drehen\(book.isSpecialEdition ? " · Farbschnitt ✨" : "")", systemImage: "rotate.3d")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(NovelyTheme.warmMutedText)
         }
@@ -215,16 +252,20 @@ struct BookDetailSheet: View {
     // MARK: - Sections
 
     private var progressSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Lesefortschritt")
                     .font(.system(size: 16, weight: .semibold, design: .serif))
                     .foregroundStyle(NovelyTheme.creamText)
                 Spacer()
                 Text("Seite \(book.currentPage) von \(book.pageCount) (\(book.progressPercent)%)")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12.5, weight: .semibold))
                     .foregroundStyle(NovelyTheme.warmGold)
             }
+
+            Text(store.estimatedRemainingTimeString(for: book))
+                .font(.system(size: 12))
+                .foregroundStyle(NovelyTheme.warmMutedText)
 
             Slider(
                 value: Binding(
@@ -261,6 +302,29 @@ struct BookDetailSheet: View {
                 .background(NovelyTheme.creamText, in: Capsule())
             }
         }
+        .padding(16)
+        .novelyGlassCard(cornerRadius: 20)
+    }
+
+    private var synopsisSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Worum es geht")
+                .font(.system(size: 17, weight: .semibold, design: .serif))
+                .foregroundStyle(NovelyTheme.creamText)
+
+            Text(book.bookDescription)
+                .font(.system(size: 14))
+                .foregroundStyle(NovelyTheme.creamText.opacity(0.88))
+                .lineLimit(expandDescription ? nil : 4)
+                .lineSpacing(3)
+
+            Button(expandDescription ? "Weniger anzeigen" : "Mehr lesen") {
+                withAnimation { expandDescription.toggle() }
+            }
+            .font(.system(size: 12.5, weight: .semibold))
+            .foregroundStyle(NovelyTheme.warmGold)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .novelyGlassCard(cornerRadius: 20)
     }
@@ -325,7 +389,7 @@ struct BookDetailSheet: View {
 
     private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Rücken, Cover & Größe")
+            Text("Echter Rücken, Cover & Größe")
                 .font(.system(size: 16, weight: .semibold, design: .serif))
                 .foregroundStyle(NovelyTheme.creamText)
 
@@ -338,7 +402,7 @@ struct BookDetailSheet: View {
                         .foregroundStyle(NovelyTheme.creamText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .novelyGlassCapsule(tint: NovelyTheme.terracotta.opacity(0.25))
+                        .novelyGlassCapsule(tint: NovelyTheme.terracotta.opacity(0.28))
                 }
                 .buttonStyle(.plain)
 
@@ -352,7 +416,6 @@ struct BookDetailSheet: View {
                 }
             }
 
-            // Spine Color Palette
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(spineColorPresets, id: \.self) { hex in
@@ -385,6 +448,91 @@ struct BookDetailSheet: View {
         .novelyGlassCard(cornerRadius: 20)
     }
 
+    private var quotesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Notizen & Zitate")
+                    .font(.system(size: 16, weight: .semibold, design: .serif))
+                    .foregroundStyle(NovelyTheme.creamText)
+                Spacer()
+                Button {
+                    showingQuoteScanner = true
+                } label: {
+                    Label("OCR-Scan", systemImage: "text.viewfinder")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(NovelyTheme.warmGold)
+                }
+            }
+
+            HStack(spacing: 8) {
+                TextField(isThoughtMode ? "Gedanken festhalten..." : "Lieblingszitat eintippen...", text: $newQuoteText)
+                    .font(.system(size: 14))
+                    .padding(10)
+                    .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
+                Button {
+                    guard !newQuoteText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                    let q = BookQuote(text: newQuoteText, pageNumber: Int(newQuotePage), isThought: isThoughtMode)
+                    book.quotes.insert(q, at: 0)
+                    store.updateBook(book)
+                    newQuoteText = ""
+                    newQuotePage = ""
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 26))
+                        .foregroundStyle(NovelyTheme.terracotta)
+                }
+            }
+
+            ForEach(book.quotes) { quote in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(quote.isThought ? quote.text : "„\(quote.text)“")
+                        .font(.system(size: 15, weight: .regular, design: .serif))
+                        .italic(!quote.isThought)
+                        .foregroundStyle(NovelyTheme.creamText)
+                    if let page = quote.pageNumber {
+                        Text("Seite \(page)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(NovelyTheme.warmMutedText)
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
+            }
+        }
+        .padding(16)
+        .novelyGlassCard(cornerRadius: 20)
+    }
+
+    private var metadataDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Weitere Details")
+                .font(.system(size: 16, weight: .semibold, design: .serif))
+                .foregroundStyle(NovelyTheme.creamText)
+
+            detailRow("Seiten", "\(book.pageCount)")
+            if !book.publishedYear.isEmpty { detailRow("Erschienen", book.publishedYear) }
+            if !book.publisher.isEmpty { detailRow("Verlag", book.publisher) }
+            detailRow("Einband", book.bindingType)
+            if !book.originalTitle.isEmpty { detailRow("Originaltitel", book.originalTitle) }
+            if !book.isbn.isEmpty { detailRow("ISBN", book.isbn) }
+        }
+        .padding(16)
+        .novelyGlassCard(cornerRadius: 20)
+    }
+
+    private func detailRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 13.5))
+                .foregroundStyle(NovelyTheme.warmMutedText)
+            Spacer()
+            Text(value)
+                .font(.system(size: 13.5, weight: .medium))
+                .foregroundStyle(NovelyTheme.creamText)
+        }
+    }
+
     private var tropesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Tropes & Vibes")
@@ -396,11 +544,8 @@ struct BookDetailSheet: View {
                     ForEach(BuiltInTropes.all, id: \.self) { trope in
                         let selected = book.tropes.contains(trope)
                         Button {
-                            if selected {
-                                book.tropes.removeAll { $0 == trope }
-                            } else {
-                                book.tropes.append(trope)
-                            }
+                            if selected { book.tropes.removeAll { $0 == trope } }
+                            else { book.tropes.append(trope) }
                             store.updateBook(book)
                         } label: {
                             Text(trope)
@@ -408,10 +553,7 @@ struct BookDetailSheet: View {
                                 .foregroundStyle(selected ? .black : NovelyTheme.creamText)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 7)
-                                .background(
-                                    selected ? NovelyTheme.warmGold : Color.white.opacity(0.08),
-                                    in: Capsule()
-                                )
+                                .background(selected ? NovelyTheme.warmGold : Color.white.opacity(0.08), in: Capsule())
                         }
                         .buttonStyle(.plain)
                     }
@@ -428,10 +570,8 @@ struct BookDetailSheet: View {
                 .font(.system(size: 16, weight: .semibold, design: .serif))
                 .foregroundStyle(NovelyTheme.creamText)
 
-            Toggle("Signierte Ausgabe", isOn: $book.isSignedEdition)
-                .tint(NovelyTheme.terracotta)
-            Toggle("Sonderausgabe / Farbschnitt", isOn: $book.isSpecialEdition)
-                .tint(NovelyTheme.terracotta)
+            Toggle("Signierte Ausgabe", isOn: $book.isSignedEdition).tint(NovelyTheme.terracotta)
+            Toggle("Sonderausgabe / Farbschnitt", isOn: $book.isSpecialEdition).tint(NovelyTheme.terracotta)
 
             HStack {
                 Text("Verliehen an")
@@ -452,68 +592,9 @@ struct BookDetailSheet: View {
         .novelyGlassCard(cornerRadius: 20)
     }
 
-    private var quotesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Zitate & Notizen")
-                    .font(.system(size: 16, weight: .semibold, design: .serif))
-                    .foregroundStyle(NovelyTheme.creamText)
-                Spacer()
-                Button {
-                    showingQuoteScanner = true
-                } label: {
-                    Label("Scannen", systemImage: "text.viewfinder")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(NovelyTheme.warmGold)
-                }
-            }
-
-            HStack(spacing: 8) {
-                TextField("Lieblingszitat eintippen...", text: $newQuoteText)
-                    .font(.system(size: 14))
-                    .padding(10)
-                    .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
-                Button {
-                    guard !newQuoteText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-                    let q = BookQuote(text: newQuoteText, pageNumber: Int(newQuotePage))
-                    book.quotes.insert(q, at: 0)
-                    store.updateBook(book)
-                    newQuoteText = ""
-                    newQuotePage = ""
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 26))
-                        .foregroundStyle(NovelyTheme.terracotta)
-                }
-            }
-
-            ForEach(book.quotes) { quote in
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("„\(quote.text)“")
-                        .font(.system(size: 15, weight: .regular, design: .serif))
-                        .italic()
-                        .foregroundStyle(NovelyTheme.creamText)
-                    if let page = quote.pageNumber {
-                        Text("Seite \(page)")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(NovelyTheme.warmMutedText)
-                    }
-                }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
-            }
-        }
-        .padding(16)
-        .novelyGlassCard(cornerRadius: 20)
-    }
-
     private func starImage(for index: Int) -> String {
-        if book.rating >= Double(index) {
-            return "star.fill"
-        } else if book.rating >= Double(index) - 0.5 {
-            return "star.leadinghalf.filled"
-        }
+        if book.rating >= Double(index) { return "star.fill" }
+        if book.rating >= Double(index) - 0.5 { return "star.leadinghalf.filled" }
         return "star"
     }
 }

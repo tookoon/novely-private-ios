@@ -7,79 +7,77 @@ final class NovelyPrivateUITests: XCTestCase {
     }
 
     @MainActor
-    func testCaptureAllScreensForVisualReview() throws {
+    func testCaptureAllV2ScreensForVisualReview() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         app.launch()
 
-        // 1. Main Bookshelf Screen (Gelesen)
-        sleep(2)
-        attachScreenshot(name: "01_Bookshelf_Gelesen")
+        // Wait a moment so background real covers can hydrate from Open Library / Google Books
+        sleep(5)
+        attachScreenshot(name: "01_Bookshelf_WarmWood_Cat_Plant")
 
-        // 2. Open Shelf Customizer
-        if app.buttons["customizeShelfButton"].waitForExistence(timeout: 3) {
-            app.buttons["customizeShelfButton"].tap()
+        // 2. Edit Mode on Shelf (showing move arrows on books & cat!)
+        if app.buttons["editShelfButton"].waitForExistence(timeout: 3) {
+            app.buttons["editShelfButton"].tap()
             sleep(1)
-            attachScreenshot(name: "02_Shelf_Customizer")
-            if app.buttons["Fertig"].exists {
-                app.buttons["Fertig"].tap()
-                sleep(1)
-            }
+            attachScreenshot(name: "02_Shelf_EditMode_DragDrop")
+            app.buttons["editShelfButton"].tap()
+            sleep(1)
         }
 
-        // 3. Open First Book Detail (3D Book Viewer)
+        // 3. Open Book Detail (3D Book + Synopsis + Metadata + Anfangen button)
         let firstBookText = app.staticTexts["Iron Flame"]
         if firstBookText.waitForExistence(timeout: 3) {
             firstBookText.tap()
             sleep(1)
-            attachScreenshot(name: "03_BookDetail_3D")
+            attachScreenshot(name: "03_BookDetail_3D_Synopsis")
             if app.buttons["Schließen"].exists {
                 app.buttons["Schließen"].tap()
                 sleep(1)
             }
         }
 
-        // 4. Progress & Quotes Tab ("Aktuell")
-        let progressTab = app.tabBars.buttons["Aktuell"]
-        if progressTab.waitForExistence(timeout: 3) {
-            progressTab.tap()
-            sleep(1)
-            attachScreenshot(name: "04_Progress_And_Quotes")
+        // 4. "Lesen" Tab (Week Cover Strip + Daily Goal + Currently Reading + Tagebuch)
+        let lesenTab = app.tabBars.buttons["Lesen"]
+        if lesenTab.waitForExistence(timeout: 3) {
+            lesenTab.tap()
+            sleep(2)
+            attachScreenshot(name: "04_Lesen_Tab_Week_Diary")
         }
 
-        // 5. Cozy Reading Room ("Lesezeit")
+        // 5. "Lesezeit" Tab (Dog on Bookshelf Room + Cat Winter Room!)
         let readingTab = app.tabBars.buttons["Lesezeit"]
         if readingTab.waitForExistence(timeout: 3) {
             readingTab.tap()
             sleep(2)
-            attachScreenshot(name: "05_ReadingRoom_Winter")
+            attachScreenshot(name: "05_ReadingRoom_Dog")
 
-            let kaminRoomButton = app.buttons["roomTheme_Kamin"]
-            if kaminRoomButton.waitForExistence(timeout: 3) {
-                kaminRoomButton.tap()
+            let catBtn = app.buttons["roomTheme_Katze"]
+            if catBtn.waitForExistence(timeout: 3) {
+                catBtn.tap()
                 sleep(1)
-                attachScreenshot(name: "06_ReadingRoom_Fireplace")
+                attachScreenshot(name: "06_ReadingRoom_Cat")
             }
         }
 
-        // 6. Statistics, Streak & Reading Calendar ("Statistik")
+        // 6. "Statistik" Tab (Real Cover Calendar + Monat teilen + Streak)
         let statsTab = app.tabBars.buttons["Statistik"]
         if statsTab.waitForExistence(timeout: 3) {
             statsTab.tap()
-            sleep(1)
-            attachScreenshot(name: "07_Stats_Streak_Calendar")
+            sleep(2)
+            attachScreenshot(name: "07_Stats_Calendar_Covers")
 
             app.swipeUp()
             sleep(1)
-            attachScreenshot(name: "08_Stats_Calendar_Value")
+            attachScreenshot(name: "08_Stats_Streak_Value")
         }
 
-        // 7. Discover, Import & Settings ("Mehr")
+        // 7. "Mehr" Tab
         let moreTab = app.tabBars.buttons["Mehr"]
         if moreTab.waitForExistence(timeout: 3) {
             moreTab.tap()
             sleep(1)
-            attachScreenshot(name: "09_More_And_Import")
+            attachScreenshot(name: "09_More_And_Backup")
         }
     }
 

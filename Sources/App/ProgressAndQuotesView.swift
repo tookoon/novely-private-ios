@@ -2,48 +2,52 @@ import SwiftUI
 
 struct ProgressAndQuotesView: View {
     @EnvironmentObject private var store: LibraryStore
-    @State private var displayedMonth = Date()
+    var onStartReadingBook: ((Book) -> Void)?
+
     @State private var quickLogBook: Book?
     @State private var showingQuoteScanner = false
+    @State private var showingGoalSheet = false
 
-    private var monthFormatter: DateFormatter {
+    private let weekdayHeaders = ["M", "D", "M", "D", "F", "S", "S"]
+
+    private var monthName: String {
         let df = DateFormatter()
         df.locale = Locale(identifier: "de_DE")
         df.dateFormat = "MMMM"
-        return df
-    }
-
-    private var yearFormatter: DateFormatter {
-        let df = DateFormatter()
-        df.dateFormat = "yyyy"
-        return df
+        return df.string(from: Date())
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 LinearGradient(
-                    colors: [
-                        Color(hex: store.settings.wallTheme.topHex),
-                        NovelyTheme.espressoBg
-                    ],
+                    colors: [Color(hex: "#2B1F18"), NovelyTheme.espressoBg],
                     startPoint: .top,
                     endPoint: .bottom
                 )
                 .ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 22) {
-                        monthlySummaryCard
+                    VStack(alignment: .leading, spacing: 18) {
+                        // 1. Weekly Book-Cover Strip + Streak + Daily Goal (exact Reel 1 & 2!)
+                        weekOverviewCard
+
+                        // 2. Currently Reading Cards with "Fortschritt" + "Lesen starten"
                         currentlyReadingSection
+
+                        // 3. Lesetagebuch (Reading Diary / Past Sessions like Reel 1!)
+                        readingDiarySection
+
+                        // 4. Quotes Section
                         quotesSection
+
                         Spacer(minLength: 40)
                     }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 12)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
                 }
             }
-            .navigationTitle("Fortschritt")
+            .navigationTitle("Lesen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -60,6 +64,11 @@ struct ProgressAndQuotesView: View {
                     .environmentObject(store)
                     .presentationDetents([.medium])
             }
+            .sheet(isPresented: $showingGoalSheet) {
+                DailyGoalEditorSheet()
+                    .environmentObject(store)
+                    .presentationDetents([.height(340)])
+            }
             .sheet(isPresented: $showingQuoteScanner) {
                 QuoteOCRScannerView(book: store.currentlyReadingBooks.first ?? store.books.first) { quote, page in
                     if let target = store.currentlyReadingBooks.first ?? store.books.first {
@@ -70,75 +79,102 @@ struct ProgressAndQuotesView: View {
         }
     }
 
-    // MARK: - Monthly Summary Card (Novely Screenshot #4 aesthetic)
+    // MARK: - Weekly Strip + Streak + Daily Goal (Exact Reel 1 & 2 Top Card)
 
-    private var monthlySummaryCard: some View {
-        let stats = store.monthlyStats(for: displayedMonth)
-        return VStack(spacing: 16) {
+    private var weekOverviewCard: some View {
+        let weekDates = store.currentWeekDates()
+        let cal = Calendar.current
+        let goalValue = store.settings.dailyGoalMode == .pages ? store.settings.dailyPagesGoal : store.settings.dailyMinutesGoal
+        let currentValue = store.settings.dailyGoalMode == .pages ? store.pagesReadToday : store.minutesReadToday
+        let remaining = max(0, goalValue - currentValue)
+
+        return VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Button {
-                    if let prev = Calendar.current.date(byAdding: .month, value: -1, to: displayedMonth) {
-                        displayedMonth = prev
-                    }
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(NovelyTheme.warmMutedText)
-                        .padding(8)
-                }
-
+                Text(monthName)
+                    .font(.system(size: 22, weight: .bold, design: .serif))
+                    .foregroundStyle(NovelyTheme.creamText)
                 Spacer()
-
-                VStack(spacing: 2) {
-                    Text(monthFormatter.string(from: displayedMonth))
-                        .font(.system(size: 26, weight: .regular, design: .serif))
-                        .italic()
+                HStack(spacing: 5) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(NovelyTheme.terracotta)
+                    Text("\(store.currentStreakDays) Lesetage in Folge")
+                        .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(NovelyTheme.creamText)
-                    Text(yearFormatter.string(from: displayedMonth))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(NovelyTheme.warmMutedText)
                 }
+            }
 
-                Spacer()
+            // 7-day M D M D F S S grid with real book covers!
+            HStack(spacing: 6) {
+                ForEach(Array(weekDates.enumerated()), id: \.offset) { idx, date in
+                    let isToday = cal.isDateInToday(date)
+                    let dayNum = cal.component(.day, from: date)
+                    let dayBook = store.bookForCalendarDay(date)
 
-                Button {
-                    if let next = Calendar.current.date(byAdding: .month, value: 1, to: displayedMonth) {
-                        displayedMonth = next
+                    VStack(spacing: 5) {
+                        Text(weekdayHeaders[idx])
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .foregroundStyle(isToday ? NovelyTheme.terracotta : NovelyTheme.warmMutedText)
+
+                        ZStack {
+                            if let book = dayBook {
+                                BookCoverForwardView(book: book, scale: 0.30)
+                                    .frame(width: 36, height: 48)
+                                    .clipShape(RoundedRectangle(cornerRadius: 7))
+                            } else {
+                                RoundedRectangle(cornerRadius: 7)
+                                    .fill(Color.white.opacity(0.06))
+                                    .frame(width: 36, height: 48)
+                                Text("\(dayNum)")
+                                    .font(.system(size: 12, weight: isToday ? .bold : .medium))
+                                    .foregroundStyle(isToday ? NovelyTheme.creamText : NovelyTheme.warmMutedText)
+                            }
+                        }
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 7)
+                                .strokeBorder(isToday ? NovelyTheme.terracotta : .clear, lineWidth: 1.8)
+                        )
                     }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(NovelyTheme.warmMutedText)
-                        .padding(8)
+                    .frame(maxWidth: .infinity)
                 }
             }
 
-            HStack(spacing: 0) {
-                metricColumn(value: "\(stats.booksCount)", label: "Bücher")
-                Divider().frame(height: 36).background(Color.white.opacity(0.15))
-                metricColumn(value: formattedNumber(stats.pagesCount), label: "Seiten")
-                Divider().frame(height: 36).background(Color.white.opacity(0.15))
-                metricColumn(value: "\(stats.readingDays)", label: "Lesetage")
+            Divider().background(Color.white.opacity(0.12))
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    if remaining == 0 {
+                        Text("Tagesziel erreicht! 🎉")
+                            .font(.system(size: 13.5, weight: .semibold))
+                            .foregroundStyle(Color(hex: "#8CE99A"))
+                    } else {
+                        Text("Noch \(remaining) \(store.settings.dailyGoalMode.rawValue) bis zu deinem Tagesziel")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(NovelyTheme.creamText)
+                    }
+                    Text("\(currentValue) / \(goalValue) \(store.settings.dailyGoalMode.rawValue) heute")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(NovelyTheme.warmMutedText)
+                }
+                Spacer()
+                Button {
+                    showingGoalSheet = true
+                } label: {
+                    Text("Tagesziel")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(NovelyTheme.creamText)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .novelyGlassCapsule()
+                }
+                .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 20)
-        .padding(.horizontal, 16)
-        .novelyGlassCard(cornerRadius: 24)
+        .padding(16)
+        .novelyGlassCard(cornerRadius: 22)
     }
 
-    private func metricColumn(value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.system(size: 28, weight: .semibold, design: .serif))
-                .foregroundStyle(NovelyTheme.creamText)
-            Text(label)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(NovelyTheme.warmMutedText)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Currently Reading Cards
+    // MARK: - Currently Reading Cards ("Fortschritt" + "Lesen starten")
 
     private var currentlyReadingSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -147,7 +183,7 @@ struct ProgressAndQuotesView: View {
                 .foregroundStyle(NovelyTheme.creamText)
 
             if store.currentlyReadingBooks.isEmpty {
-                Text("Tippe im Regal auf ein Buch und setze es auf „Aktuell“, um deinen Fortschritt hier zu tracken.")
+                Text("Tippe im Regal auf ein Buch und setze es auf „Aktuell“, um es hier zu tracken.")
                     .font(.system(size: 14))
                     .foregroundStyle(NovelyTheme.warmMutedText)
                     .padding(16)
@@ -155,46 +191,109 @@ struct ProgressAndQuotesView: View {
                     .novelyGlassCard(cornerRadius: 18)
             } else {
                 ForEach(store.currentlyReadingBooks) { book in
-                    HStack(spacing: 14) {
-                        BookCoverForwardView(book: book, scale: 0.62)
+                    VStack(spacing: 12) {
+                        HStack(spacing: 14) {
+                            BookCoverForwardView(book: book, scale: 0.60)
 
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(book.title)
-                                .font(.system(size: 17, weight: .bold, design: .serif))
-                                .foregroundStyle(NovelyTheme.creamText)
-                                .lineLimit(2)
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(book.title)
+                                    .font(.system(size: 17, weight: .bold, design: .serif))
+                                    .foregroundStyle(NovelyTheme.creamText)
+                                    .lineLimit(2)
 
-                            Text(book.author)
-                                .font(.system(size: 13))
-                                .foregroundStyle(NovelyTheme.warmMutedText)
+                                Text(book.author)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(NovelyTheme.warmMutedText)
 
-                            Text("Seite \(book.currentPage) von \(book.pageCount)")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(NovelyTheme.warmGold)
+                                Text("Seite \(book.currentPage) von \(book.pageCount) · \(store.estimatedRemainingTimeString(for: book))")
+                                    .font(.system(size: 11.5, weight: .medium))
+                                    .foregroundStyle(NovelyTheme.warmGold)
 
-                            ProgressView(value: book.progress)
-                                .tint(NovelyTheme.terracotta)
-                                .padding(.top, 2)
-
-                            HStack {
-                                Spacer()
-                                Button {
-                                    quickLogBook = book
-                                } label: {
-                                    Text("Fortschritt")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(.black)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 7)
-                                        .background(NovelyTheme.creamText, in: Capsule())
-                                }
-                                .buttonStyle(.plain)
+                                ProgressView(value: book.progress)
+                                    .tint(NovelyTheme.terracotta)
+                                    .padding(.top, 2)
                             }
-                            .padding(.top, 4)
+                        }
+
+                        HStack(spacing: 10) {
+                            Button {
+                                quickLogBook = book
+                            } label: {
+                                Text("Fortschritt")
+                                    .font(.system(size: 13.5, weight: .semibold))
+                                    .foregroundStyle(NovelyTheme.creamText)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .novelyGlassCapsule()
+                            }
+                            .buttonStyle(.plain)
+
+                            Button {
+                                onStartReadingBook?(book)
+                            } label: {
+                                Text("Lesen starten")
+                                    .font(.system(size: 13.5, weight: .semibold))
+                                    .foregroundStyle(.black)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(NovelyTheme.creamText, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(14)
                     .novelyGlassCard(cornerRadius: 20)
+                }
+            }
+        }
+    }
+
+    // MARK: - Lesetagebuch (Tagebuch from Reel 1!)
+
+    private var readingDiarySection: some View {
+        let df = DateFormatter()
+        df.dateFormat = "dd.MM."
+
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Tagebuch")
+                .font(.system(size: 20, weight: .semibold, design: .serif))
+                .foregroundStyle(NovelyTheme.creamText)
+
+            if store.sortedSessions.isEmpty {
+                Text("Jede Lesesession und jeder Fortschritt, den du einträgst, landet hier.")
+                    .font(.system(size: 13.5))
+                    .foregroundStyle(NovelyTheme.warmMutedText)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .novelyGlassCard(cornerRadius: 16)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(Array(store.sortedSessions.prefix(6))) { session in
+                        if let book = store.books.first(where: { $0.id == session.bookId }) {
+                            HStack(spacing: 12) {
+                                Text(df.string(from: session.date))
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(NovelyTheme.warmMutedText)
+                                    .frame(width: 42, alignment: .leading)
+
+                                BookCoverForwardView(book: book, scale: 0.24)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(book.title)
+                                        .font(.system(size: 14, weight: .semibold, design: .serif))
+                                        .foregroundStyle(NovelyTheme.creamText)
+                                        .lineLimit(1)
+                                    Text("\(max(1, session.durationSeconds / 60)) Minuten · +\(session.pagesRead) Seiten")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(NovelyTheme.warmMutedText)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .novelyGlassCard(cornerRadius: 15)
+                        }
+                    }
                 }
             }
         }
@@ -218,10 +317,10 @@ struct ProgressAndQuotesView: View {
                 }
             }
 
-            ForEach(Array(store.allQuotesWithBook.prefix(5)), id: \.1.id) { book, quote in
+            ForEach(Array(store.allQuotesWithBook.prefix(4)), id: \.1.id) { book, quote in
                 VStack(alignment: .leading, spacing: 8) {
                     Text("„\(quote.text)“")
-                        .font(.system(size: 16, weight: .regular, design: .serif))
+                        .font(.system(size: 15.5, weight: .regular, design: .serif))
                         .italic()
                         .foregroundStyle(NovelyTheme.creamText)
 
@@ -237,17 +336,79 @@ struct ProgressAndQuotesView: View {
                         }
                     }
                 }
-                .padding(16)
+                .padding(14)
                 .novelyGlassCard(cornerRadius: 18)
             }
         }
     }
+}
 
-    private func formattedNumber(_ value: Int) -> String {
-        let nf = NumberFormatter()
-        nf.numberStyle = .decimal
-        nf.locale = Locale(identifier: "de_DE")
-        return nf.string(from: NSNumber(value: value)) ?? "\(value)"
+// MARK: - Daily Goal Editor Sheet (Pages or Minutes like Reel 2!)
+
+struct DailyGoalEditorSheet: View {
+    @EnvironmentObject private var store: LibraryStore
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var mode: DailyGoalMode = .pages
+    @State private var value: Double = 30
+
+    var body: some View {
+        ZStack {
+            NovelyTheme.espressoBg.ignoresSafeArea()
+            VStack(spacing: 18) {
+                Text("Tagesziel")
+                    .font(.system(size: 22, weight: .bold, design: .serif))
+                    .foregroundStyle(NovelyTheme.creamText)
+                    .padding(.top, 14)
+
+                Picker("Modus", selection: $mode) {
+                    ForEach(DailyGoalMode.allCases) { m in
+                        Text(m.rawValue).tag(m)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 36)
+
+                VStack(spacing: 4) {
+                    Text("\(Int(value))")
+                        .font(.system(size: 44, weight: .bold, design: .serif))
+                        .foregroundStyle(NovelyTheme.creamText)
+                    Text(mode.rawValue)
+                        .font(.system(size: 13))
+                        .foregroundStyle(NovelyTheme.warmMutedText)
+                }
+
+                Slider(value: $value, in: 5...150, step: 5)
+                    .tint(NovelyTheme.terracotta)
+                    .padding(.horizontal, 28)
+
+                Button {
+                    store.settings.dailyGoalMode = mode
+                    if mode == .pages {
+                        store.settings.dailyPagesGoal = Int(value)
+                    } else {
+                        store.settings.dailyMinutesGoal = Int(value)
+                    }
+                    store.persist()
+                    dismiss()
+                } label: {
+                    Text("Speichern")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(NovelyTheme.creamText, in: Capsule())
+                }
+                .padding(.horizontal, 24)
+            }
+        }
+        .onAppear {
+            mode = store.settings.dailyGoalMode
+            value = Double(mode == .pages ? store.settings.dailyPagesGoal : store.settings.dailyMinutesGoal)
+        }
+        .onChange(of: mode) { _, newMode in
+            value = Double(newMode == .pages ? store.settings.dailyPagesGoal : store.settings.dailyMinutesGoal)
+        }
     }
 }
 
