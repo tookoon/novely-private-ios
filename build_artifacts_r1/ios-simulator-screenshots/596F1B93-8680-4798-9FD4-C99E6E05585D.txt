@@ -1,0 +1,24 @@
+Failed to tap "Kamin" Button: Find single matching element. Multiple matching elements found for <XCUIElementQuery: 0x109907cf0>.
+Sparse tree of matches:
+→Application, pid: 11156, label: 'Novely'
+  ↳Window (Main)
+    ↳Other
+      ↳Other
+        ↳Other
+          ↳Other
+            ↳Other
+              ↳Other
+                ↳Other
+                  ↳Other
+                    ↳Other
+                      ↳Other
+                        ↳Button, label: 'Kamin'
+                        ↳Button, label: 'Kamin'
+Possibly caused by runtime issues:
+Automation type mismatch: computed Button from legacy attributes vs PopUpButton from modern attribute. Input attributes and values: {
+    "XC_kAXXCAttributeAutomationType" = 14;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 1108101562369;
+}
+See test report attachments for more detail.

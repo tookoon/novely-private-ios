@@ -54,8 +54,9 @@ final class NovelyPrivateUITests: XCTestCase {
             sleep(2)
             attachScreenshot(name: "05_ReadingRoom_Winter")
 
-            if app.buttons["Kamin"].exists {
-                app.buttons["Kamin"].tap()
+            let kaminRoomButton = app.buttons["roomTheme_Kamin"]
+            if kaminRoomButton.waitForExistence(timeout: 3) {
+                kaminRoomButton.tap()
                 sleep(1)
                 attachScreenshot(name: "06_ReadingRoom_Fireplace")
             }

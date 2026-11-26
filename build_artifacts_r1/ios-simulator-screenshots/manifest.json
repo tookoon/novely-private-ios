@@ -1,0 +1,142 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "F9479809-5B7B-4690-A3FD-2770A6CEFA15.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "05_ReadingRoom_Winter_0_D02B478C-A027-4F0A-908A-6F9275EE349D.png",
+        "timestamp" : 1795685487.376
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "9B8BCAAB-2267-47B2-AF0E-AB2C5CEF46DD",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Synthesized Event 2026-11-26 at 09.31.22 AM",
+        "timestamp" : 1795685482.04
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "0D327548-3369-447F-82BC-1EBFD95DBD55.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "04_Progress_And_Quotes_0_E67A219C-78D8-449E-9256-A92CFECF7982.png",
+        "timestamp" : 1795685480.241
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "62D38C9E-61A0-4835-8EE6-35E11F4BE5C7",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Synthesized Event 2026-11-26 at 09.31.16 AM",
+        "timestamp" : 1795685476.618
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "3DD7561C-3E07-49C1-9237-5E0A955B7057",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Synthesized Event 2026-11-26 at 09.31.12 AM",
+        "timestamp" : 1795685472.964
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "64A60ACE-EB58-4111-B13B-349E9B6F1CE4.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "03_BookDetail_3D_0_7CC0C84F-EA95-49C9-B43A-592B44ADEDE8.png",
+        "timestamp" : 1795685472.022
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "433C4DCF-9CC7-4A3A-A586-9B616213F408",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Synthesized Event 2026-11-26 at 09.31.09 AM",
+        "timestamp" : 1795685469.723
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "3EDEBD5F-45F8-449E-806F-922ABA1A18F6",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Synthesized Event 2026-11-26 at 09.31.06 AM",
+        "timestamp" : 1795685466.222
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "7D3082C7-0715-4990-9A4C-15F228675DB1.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "02_Shelf_Customizer_0_45A16FA1-C47A-45AF-8366-BDF75A330B72.png",
+        "timestamp" : 1795685465.258
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "398391FD-2142-4A11-87DC-98DBBC18FC8A",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Synthesized Event 2026-11-26 at 09.31.01 AM",
+        "timestamp" : 1795685461.423
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "A9F1AFC5-6234-4822-81CE-F6B81D6951E9.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "01_Bookshelf_Gelesen_0_1629C624-6033-4853-8868-4FAE2D62EDFA.png",
+        "timestamp" : 1795685458.992
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "A0D5CD9B-E372-4562-A2D8-452A11B429F0.mp4",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Screen Recording 2026-11-26 at 09.30.41 AM.mp4",
+        "timestamp" : 1795685441.58
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "596F1B93-8680-4798-9FD4-C99E6E05585D.txt",
+        "isAssociatedWithFailure" : true,
+        "suggestedHumanReadableName" : "Complete Issue Description.txt"
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "7DFC6D04-7D82-4556-8C18-139B6659F11C.txt",
+        "isAssociatedWithFailure" : true,
+        "suggestedHumanReadableName" : "App UI hierarchy for com.novelyprivate_0_E57635F0-ED48-4FD6-8058-5398866C312B.app",
+        "timestamp" : 1795685488.134
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "6478AFFB-AE17-412A-A1E5-51BCFFD300B6",
+        "deviceName" : "iPhone 17 Pro",
+        "exportedFileName" : "C8323F25-EB64-4609-BC42-651685B943AF",
+        "isAssociatedWithFailure" : true,
+        "suggestedHumanReadableName" : "UI Snapshot 2026-11-26 at 09.31.28 AM",
+        "timestamp" : 1795685488.134
+      }
+    ],
+    "testIdentifier" : "NovelyPrivateUITests/testCaptureAllScreensForVisualReview()",
+    "testIdentifierURL" : "test://com.apple.xcode/NovelyPrivate/NovelyPrivateUITests/NovelyPrivateUITests/testCaptureAllScreensForVisualReview"
+  }
+]

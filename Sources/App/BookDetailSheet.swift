@@ -271,12 +271,28 @@ struct BookDetailSheet: View {
                 .font(.system(size: 16, weight: .semibold, design: .serif))
                 .foregroundStyle(NovelyTheme.creamText)
 
-            Picker("Regal", selection: $book.shelf) {
-                ForEach(ShelfCategory.allCases) { cat in
-                    Text(cat.rawValue).tag(cat)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(ShelfCategory.allCases) { cat in
+                        let active = book.shelf == cat
+                        Button {
+                            book.shelf = cat
+                            store.updateBook(book)
+                        } label: {
+                            Text(cat.rawValue)
+                                .font(.system(size: 13, weight: active ? .semibold : .regular))
+                                .foregroundStyle(active ? .black : NovelyTheme.creamText)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(
+                                    active ? NovelyTheme.creamText : Color.white.opacity(0.08),
+                                    in: Capsule()
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
-            .pickerStyle(.segmented)
 
             HStack(spacing: 8) {
                 ForEach(BookDisplayStyle.allCases) { style in

@@ -1,0 +1,77 @@
+Application, 0x1173a0000, pid: 11156, label: 'Novely' <App element pid: 11156>
+  Window (Main), 0x1173a0140, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4410984448.4>
+    Other, 0x1173a0280, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4463676928.5>
+      Other, 0x1173a03c0, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4463311872.6>
+        Other, 0x1173a0500, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4410983424.7>
+          Other, 0x1173a0640, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4463130624.8>
+            Other, 0x1173a0780, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4463664128.9>
+              Other, 0x1173a08c0, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4463680000.10>
+                Other, 0x1173a0a00, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4412216128.12>
+                  Other, 0x1173a0b40, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4410990592.424>
+                    Other, 0x1173a0c80, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4463470656.425>
+                      Other, 0x1173a0dc0, {{-43.0, 0.0}, {488.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4463466176.426>
+                        Image, 0x1173a0f00, {{-43.0, 0.0}, {488.0, 874.0}}, label: 'ReadingRoomWinter' <AX element pid: 11156, elementOrHash.elementID: 4463224448.427>
+                        StaticText, 0x1173a1040, {{148.8, 74.0}, {104.3, 18.0}}, label: 'Deine Lesezeit' <AX element pid: 11156, elementOrHash.elementID: 4463215040.428>
+                        Button, 0x1173a1180, {{89.3, 109.0}, {55.0, 14.3}}, label: 'Winter' <AX element pid: 11156, elementOrHash.elementID: 4463218176.429>
+                          Image, 0x1173a12c0, {{89.3, 110.7}, {9.7, 11.0}}, identifier: 'snowflake', label: 'Wirbelnder Schnee' <AX element pid: 11156, elementOrHash.elementID: 4463219968.439>
+                          StaticText, 0x1173a1400, {{105.0, 109.0}, {39.3, 14.3}}, label: 'Winter' <AX element pid: 11156, elementOrHash.elementID: 4463214592.440>
+                        Button, 0x1173a1540, {{177.0, 109.0}, {53.7, 14.3}}, label: 'Regen' <AX element pid: 11156, elementOrHash.elementID: 4463227136.430>
+                          Image, 0x1173a1680, {{177.0, 110.0}, {12.3, 12.7}}, identifier: 'cloud.rain.fill', label: 'Regen' <AX element pid: 11156, elementOrHash.elementID: 4463218624.441>
+                          StaticText, 0x1173a17c0, {{194.7, 109.0}, {36.0, 14.3}}, label: 'Regen' <AX element pid: 11156, elementOrHash.elementID: 4463220416.442>
+                        Button, 0x1173a1900, {{264.0, 109.0}, {50.0, 14.3}}, label: 'Kamin' <AX element pid: 11156, elementOrHash.elementID: 4463216832.431>
+                          Image, 0x1173a1a40, {{264.0, 110.3}, {9.0, 11.7}}, identifier: 'flame.fill', label: 'Flamme' <AX element pid: 11156, elementOrHash.elementID: 4463215488.443>
+                          StaticText, 0x1173a1b80, {{279.0, 109.0}, {35.0, 14.3}}, label: 'Kamin' <AX element pid: 11156, elementOrHash.elementID: 4463217728.444>
+                        StaticText, 0x1173a1cc0, {{133.8, 154.3}, {134.3, 67.0}}, label: '00:00' <AX element pid: 11156, elementOrHash.elementID: 4463227584.432>
+                        Button, 0x1173a1e00, {{134.7, 227.3}, {133.0, 31.0}}, label: 'Yellowface' <AX element pid: 11156, elementOrHash.elementID: 4463222656.433>
+                          Button, 0x1173a1f40, {{134.7, 227.3}, {133.0, 31.0}} <AX element pid: 11156, elementOrHash.elementID: 4662285568.445>
+                            Image, 0x1173a2080, {{150.0, 236.7}, {10.0, 12.7}}, identifier: 'book.closed.fill', label: 'book.closed.fill' <AX element pid: 11156, elementOrHash.elementID: 4463223104.457>
+                            StaticText, 0x1173a21c0, {{167.3, 234.3}, {71.0, 17.0}}, label: 'Yellowface' <AX element pid: 11156, elementOrHash.elementID: 4463219072.458>
+                            Image, 0x1173a2300, {{245.7, 238.0}, {6.7, 9.7}}, identifier: 'chevron.up.chevron.down', label: 'Auf- Und Abwärtszeigende Chevrons' <AX element pid: 11156, elementOrHash.elementID: 4463219520.459>
+                        Button, 0x1173a2440, {{28.7, 667.0}, {63.3, 30.3}}, label: 'Aus' <AX element pid: 11156, elementOrHash.elementID: 4463224000.434>
+                          Image, 0x1173a2580, {{40.3, 676.0}, {12.7, 12.7}}, identifier: 'speaker.slash', label: 'Ton Aus' <AX element pid: 11156, elementOrHash.elementID: 4463221312.446>
+                          StaticText, 0x1173a26c0, {{57.7, 675.0}, {22.3, 14.3}}, label: 'Aus' <AX element pid: 11156, elementOrHash.elementID: 4463223552.447>
+                        Button, 0x1173a2800, {{100.0, 666.7}, {80.0, 31.0}}, label: 'Regen' <AX element pid: 11156, elementOrHash.elementID: 4463228480.435>
+                          Image, 0x1173a2940, {{113.0, 675.3}, {13.7, 13.7}}, identifier: 'cloud.rain.fill', label: 'Regen' <AX element pid: 11156, elementOrHash.elementID: 4463220864.448>
+                          StaticText, 0x1173a2a80, {{132.0, 675.0}, {36.0, 14.3}}, label: 'Regen' <AX element pid: 11156, elementOrHash.elementID: 4463229376.449>
+                        Button, 0x1173a2bc0, {{188.0, 667.0}, {76.0, 30.3}}, label: 'Kamin' <AX element pid: 11156, elementOrHash.elementID: 4463215936.436>
+                          Image, 0x1173a2d00, {{201.0, 675.7}, {10.0, 13.0}}, identifier: 'flame.fill', label: 'Flamme' <AX element pid: 11156, elementOrHash.elementID: 4463225792.450>
+                          StaticText, 0x1173a2e40, {{217.0, 675.0}, {35.0, 14.3}}, label: 'Kamin' <AX element pid: 11156, elementOrHash.elementID: 4463216384.451>
+                        Button, 0x1173a2f80, {{272.0, 667.0}, {101.3, 30.3}}, label: 'Bibliothek' <AX element pid: 11156, elementOrHash.elementID: 4463226240.437>
+                          Image, 0x1173a30c0, {{285.3, 676.0}, {13.3, 12.7}}, identifier: 'building.columns.fill', label: 'Gebäude' <AX element pid: 11156, elementOrHash.elementID: 4463228032.452>
+                          StaticText, 0x1173a3200, {{305.0, 675.0}, {56.3, 14.3}}, label: 'Bibliothek' <AX element pid: 11156, elementOrHash.elementID: 4463226688.453>
+                        Button, 0x1173a3340, {{20.0, 719.7}, {362.0, 49.3}}, label: 'Lesezeit starten' <AX element pid: 11156, elementOrHash.elementID: 4463286848.438>
+                          Image, 0x1173a3480, {{131.0, 737.3}, {12.7, 14.0}}, identifier: 'play.fill', label: 'Wiedergeben' <AX element pid: 11156, elementOrHash.elementID: 4463229824.454>
+                          StaticText, 0x1173a35c0, {{20.0, 719.7}, {362.0, 49.3}}, label: 'Lesezeit starten' <AX element pid: 11156, elementOrHash.elementID: 4463284160.455>
+              Other, 0x1173a3700, {{0.0, 791.0}, {402.0, 83.0}} <AX element pid: 11156, elementOrHash.elementID: 4463664576.11>
+                Other, 0x1173a3840, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 11156, elementOrHash.elementID: 4463671296.13>
+                  TabBar, 0x1173a3980, {{0.0, 791.0}, {402.0, 83.0}}, label: 'Tab-Leiste' <AX element pid: 11156, elementOrHash.elementID: 4465198336.16>
+                    Other, 0x1173a3ac0, {{21.0, 791.0}, {360.0, 62.0}} <AX element pid: 11156, elementOrHash.elementID: 4463665024.19>
+                      Other, 0x1173a3c00, {{21.0, 791.0}, {77.0, 54.0}} <AX element pid: 11156, elementOrHash.elementID: 4412216576.22>
+                      Other, 0x1173a3d40, {{21.0, 791.0}, {360.0, 62.0}} <AX element pid: 11156, elementOrHash.elementID: 4463665472.23>
+                        Button, 0x1173a3e80, {{25.0, 795.0}, {77.0, 54.0}}, label: 'Regal' <AX element pid: 11156, elementOrHash.elementID: 4410859008.28>
+                          Image, 0x1173a4000, {{47.0, 800.0}, {33.3, 29.3}}, identifier: 'books.vertical.fill', label: 'Bücherregal' <AX element pid: 11156, elementOrHash.elementID: 4463680512.39>
+                        Button, 0x1173a4140, {{93.8, 795.0}, {77.0, 54.0}}, label: 'Aktuell' <AX element pid: 11156, elementOrHash.elementID: 4410861568.29>
+                          Image, 0x1173a4280, {{118.8, 798.0}, {26.7, 32.7}}, identifier: 'book.pages.fill', label: 'book.pages.fill' <AX element pid: 11156, elementOrHash.elementID: 4463682048.40>
+                        Button, 0x1173a43c0, {{162.5, 795.0}, {77.0, 54.0}}, label: 'Lesezeit', Selected <AX element pid: 11156, elementOrHash.elementID: 4410864128.30>
+                          Image, 0x1173a4500, {{189.5, 799.7}, {23.3, 28.7}}, identifier: 'flame.fill', label: 'Flamme' <AX element pid: 11156, elementOrHash.elementID: 4463683072.41>
+                        Button, 0x1173a4640, {{231.2, 795.0}, {77.0, 54.0}}, label: 'Statistik' <AX element pid: 11156, elementOrHash.elementID: 4475928576.31>
+                          Image, 0x1173a4780, {{255.2, 802.3}, {29.0, 25.0}}, identifier: 'calendar', label: 'Kalender' <AX element pid: 11156, elementOrHash.elementID: 4463684096.42>
+                        Button, 0x1173a48c0, {{300.0, 795.0}, {77.0, 54.0}}, label: 'Mehr' <AX element pid: 11156, elementOrHash.elementID: 4475931136.32>
+                          Image, 0x1173a4a00, {{326.0, 799.0}, {26.0, 30.0}}, identifier: 'sparkles', label: 'Funken' <AX element pid: 11156, elementOrHash.elementID: 4463685120.43>
+                      Other, 0x1173a4b40, {{162.5, 795.0}, {77.0, 54.0}} <AX element pid: 11156, elementOrHash.elementID: 4465198976.24>
+                        Other, 0x1173a4c80, {{162.5, 795.0}, {77.0, 54.0}} <AX element pid: 11156, elementOrHash.elementID: 4463667264.33>
+                          Other, 0x1173a4dc0, {{162.5, 795.0}, {77.0, 54.0}} <AX element pid: 11156, elementOrHash.elementID: 4463665920.44>
+                          Other, 0x1173a4f00, {{162.5, 795.0}, {77.0, 54.0}} <AX element pid: 11156, elementOrHash.elementID: 4463667712.45>
+                            Other, 0x1173a5040, {{162.5, 795.0}, {77.0, 54.0}} <AX element pid: 11156, elementOrHash.elementID: 4463669056.52>
+                              Other, 0x1173a5180, {{162.5, 795.0}, {77.0, 54.0}} <AX element pid: 11156, elementOrHash.elementID: 4463669504.58>
+                                Other, 0x1173a52c0, {{162.5, 795.0}, {77.0, 54.0}} <AX element pid: 11156, elementOrHash.elementID: 4463669952.64>
+                              Other, 0x1173a5400, {{162.5, 795.0}, {77.0, 54.0}} <AX element pid: 11156, elementOrHash.elementID: 4463668160.59>
+                            Other, 0x1173a5540, {{162.5, 795.0}, {77.0, 54.0}} <AX element pid: 11156, elementOrHash.elementID: 4463668608.53>
+                Other, 0x1173a5680, {{0.0, 791.0}, {402.0, 83.0}} <AX element pid: 11156, elementOrHash.elementID: 4463677952.14>
+                  Other, 0x1173a57c0, {{0.0, 791.0}, {402.0, 83.0}} <AX element pid: 11156, elementOrHash.elementID: 4410974976.17>
+                    Other, 0x1173a5900, {{0.0, 791.0}, {402.0, 83.0}} <AX element pid: 11156, elementOrHash.elementID: 4412217472.20>
+                      Other, 0x1173a5a40, {{0.0, 791.0}, {402.0, 83.0}} <AX element pid: 11156, elementOrHash.elementID: 4412217920.25>
+                        Other, 0x1173a5b80, {{0.0, 791.0}, {402.0, 83.0}} <AX element pid: 11156, elementOrHash.elementID: 4463687168.34>
+                          Other, 0x1173a5cc0, {{0.0, 791.0}, {402.0, 83.0}} <AX element pid: 11156, elementOrHash.elementID: 4412218368.46>
+                      Other, 0x1173a5e00, {{0.0, 791.0}, {402.0, 83.0}} <AX element pid: 11156, elementOrHash.elementID: 4463687680.26>
+                        Other, 0x1173a5f40, {{0.0, 791.0}, {402.0, 83.0}} <AX element pid: 11156, elementOrHash.elementID: 4412219264.35>

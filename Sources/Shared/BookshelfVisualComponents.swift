@@ -233,14 +233,16 @@ public struct BookSpineView: View {
                         .padding(.bottom, 9 * scale)
                 }
 
-                // Vertical spine title
+                // Vertical spine title (leaves extra room at bottom if series badge is shown)
+                let verticalInset: CGFloat = book.seriesIndex != nil ? 46 * scale : 30 * scale
                 Text(book.title)
                     .font(titleFont)
                     .foregroundStyle(Color(hex: book.spineTextColorHex))
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
-                    .frame(width: height - 30 * scale, height: width - 4 * scale)
+                    .frame(width: max(30, height - verticalInset), height: width - 4 * scale)
                     .rotationEffect(.degrees(-90))
+                    .offset(y: book.seriesIndex != nil ? -5 * scale : 0)
             }
 
             // 3D cylindrical spine shading (left hinge highlight + right shadow)

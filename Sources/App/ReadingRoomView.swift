@@ -78,6 +78,7 @@ struct ReadingRoomView: View {
                                 .novelyGlassCapsule(tint: active ? NovelyTheme.terracotta.opacity(0.32) : nil)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("roomTheme_\(room == .winter ? "Winter" : (room == .rainy ? "Regen" : "Kamin"))")
                         }
                     }
                 }
@@ -143,6 +144,7 @@ struct ReadingRoomView: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("ambientSound_\(sound.rawValue)")
                         }
                     }
                     .padding(8)
