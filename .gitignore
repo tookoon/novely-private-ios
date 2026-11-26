@@ -4,6 +4,6 @@ DerivedData/
 *.xcodeproj
 xcuserdata/
 AssetsRaw/
-screenshots/
+screenshots*/
 build_artifacts*/
 *.ipa

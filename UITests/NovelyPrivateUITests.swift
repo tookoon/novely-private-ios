@@ -31,8 +31,9 @@ final class NovelyPrivateUITests: XCTestCase {
             firstBookText.tap()
             sleep(1)
             attachScreenshot(name: "03_BookDetail_3D_Synopsis")
-            if app.buttons["Schließen"].exists {
-                app.buttons["Schließen"].tap()
+            let closeBtn = app.navigationBars.buttons["Schließen"].firstMatch
+            if closeBtn.waitForExistence(timeout: 3) {
+                closeBtn.tap()
                 sleep(1)
             }
         }
